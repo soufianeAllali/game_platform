@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WonderPlay Kids Game Hub</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="page-loader" id="pageLoader" aria-hidden="true">
+    <div class="loader-orbit"></div>
+    <p>Opening fun...</p>
+  </div>
+
+  <header class="hero">
+    <nav class="topbar" aria-label="Main navigation">
+      <a class="brand" href="index.html" aria-label="WonderPlay home">
+        <span class="brand-mark">W</span>
+        <span>WonderPlay</span>
+      </a>
+      <a class="library-link" href="#games">Game Library</a>
+    </nav>
+
+    <section class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Kids game platform</p>
+        <h1>Pick a bright little adventure.</h1>
+        <p class="hero-text">Race, remember, hunt, cook, jump, and discover playful challenges made for quick happy breaks.</p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#games">Explore Games</a>
+          <a class="secondary-action play-link" href="games/game5.html">Featured Play</a>
+        </div>
+      </div>
+
+      <article class="featured-card" data-tilt>
+        <div class="featured-art" aria-hidden="true">
+          <span class="spark one"></span>
+          <span class="spark two"></span>
+          <span class="feature-emoji">🧠</span>
+        </div>
+        <div class="featured-info">
+          <span class="badge">Featured</span>
+          <h2>Magic Memory Cards</h2>
+          <p>Flip cards, match pairs, and train your super memory.</p>
+          <a class="featured-button play-link" href="games/game5.html">Play Now</a>
+        </div>
+      </article>
+    </section>
+  </header>
+
+  <main>
+    <section class="controls-panel" aria-label="Game filters">
+      <label class="search-box" for="searchInput">
+        <span aria-hidden="true">🔎</span>
+        <input id="searchInput" type="search" placeholder="Search games..." autocomplete="off">
+      </label>
+
+      <div class="filters" role="list" aria-label="Categories">
+        <button class="filter-button active" type="button" data-filter="all">All</button>
+        <button class="filter-button" type="button" data-filter="Action">Action</button>
+        <button class="filter-button" type="button" data-filter="Puzzle">Puzzle</button>
+        <button class="filter-button" type="button" data-filter="Kids">Kids</button>
+        <button class="filter-button" type="button" data-filter="Memory">Memory</button>
+      </div>
+    </section>
+
+    <section class="games-section" id="games">
+      <div class="section-heading">
+        <p class="eyebrow">Choose your game</p>
+        <h2>Mini Games Library</h2>
+      </div>
+
+      <div class="games-grid" id="gamesGrid">
+        <article class="game-card" data-title="Turbo Racing" data-category="Action Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game1.html" aria-label="Play Turbo Racing"></a>
+          <div class="game-art racing" aria-hidden="true"><span>🏎️</span></div>
+          <div class="game-content">
+            <span class="pill">Action</span>
+            <h3>Turbo Racing</h3>
+            <p>Zoom past obstacles and chase the finish line.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Crazy Monster Hunt" data-category="Action Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game2.html" aria-label="Play Crazy Monster Hunt"></a>
+          <div class="game-art monster" aria-hidden="true"><span>👾</span></div>
+          <div class="game-content">
+            <span class="pill">Action</span>
+            <h3>Crazy Monster Hunt</h3>
+            <p>Catch silly monsters before they escape.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Treasure Adventure" data-category="Action Puzzle Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game3.html" aria-label="Play Treasure Adventure"></a>
+          <div class="game-art treasure" aria-hidden="true"><span>💎</span></div>
+          <div class="game-content">
+            <span class="pill">Puzzle</span>
+            <h3>Treasure Adventure</h3>
+            <p>Explore, collect gems, and dodge danger.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Magic Memory Cards" data-category="Puzzle Memory Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game5.html" aria-label="Play Magic Memory Cards"></a>
+          <div class="game-art memory" aria-hidden="true"><span>🃏</span></div>
+          <div class="game-content">
+            <span class="pill">Memory</span>
+            <h3>Magic Memory Cards</h3>
+            <p>Match magical pairs with a sharp mind.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Frog Jump Adventure" data-category="Action Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game6.html" aria-label="Play Frog Jump Adventure"></a>
+          <div class="game-art frog" aria-hidden="true"><span>🐸</span></div>
+          <div class="game-content">
+            <span class="pill">Action</span>
+            <h3>Frog Jump Adventure</h3>
+            <p>Leap across paths and keep moving forward.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Crazy Pizza Chef" data-category="Puzzle Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game7.html" aria-label="Play Crazy Pizza Chef"></a>
+          <div class="game-art pizza" aria-hidden="true"><span>🍕</span></div>
+          <div class="game-content">
+            <span class="pill">Kids</span>
+            <h3>Crazy Pizza Chef</h3>
+            <p>Build tasty pizzas before the timer runs out.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Crazy Talking Toy City" data-category="Kids Puzzle" data-tilt>
+          <a class="card-hit play-link" href="games/game9.html" aria-label="Play Crazy Talking Toy City"></a>
+          <div class="game-art toy" aria-hidden="true"><span>🧸</span></div>
+          <div class="game-content">
+            <span class="pill">Kids</span>
+            <h3>Crazy Talking Toy City</h3>
+            <p>Play in a cheerful city full of toy surprises.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Word Guess Adventure" data-category="Puzzle Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game10.html" aria-label="Play Word Guess Adventure"></a>
+          <div class="game-art word" aria-hidden="true"><span>🔤</span></div>
+          <div class="game-content">
+            <span class="pill">Puzzle</span>
+            <h3>Word Guess Adventure</h3>
+            <p>Guess cheerful words one letter at a time.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+
+        <article class="game-card" data-title="Find the Hidden Magic Item" data-category="Puzzle Kids" data-tilt>
+          <a class="card-hit play-link" href="games/game11.html" aria-label="Play Find the Hidden Magic Item"></a>
+          <div class="game-art hidden" aria-hidden="true"><span>🔮</span></div>
+          <div class="game-content">
+            <span class="pill">Puzzle</span>
+            <h3>Find the Hidden Magic Item</h3>
+            <p>Spot the secret item hiding in plain sight.</p>
+            <span class="play-button">Play Now</span>
+          </div>
+        </article>
+      </div>
+
+      <div class="empty-state" id="emptyState" hidden>
+        <span>✨</span>
+        <p>No games found. Try another search.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>WonderPlay game hub</p>
+  </footer>
+
+  <script src="assets/js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crazy Monster Hunt</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Comic Sans MS, cursive;
+}
+
+body{
+    overflow:hidden;
+    height:100vh;
+    background:
+    linear-gradient(to bottom,#1d2671,#c33764);
+}
+
+/* HUD */
+
+.hud{
+    position:fixed;
+    top:15px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    gap:25px;
+    z-index:100;
+}
+
+.box{
+    background:white;
+    padding:15px 30px;
+    border-radius:20px;
+    font-size:28px;
+    box-shadow:0 5px 20px rgba(0,0,0,.3);
+}
+
+/* TITLE */
+
+.title{
+    position:absolute;
+    top:100px;
+    width:100%;
+    text-align:center;
+    font-size:70px;
+    color:white;
+    text-shadow:0 0 20px #fff;
+    animation:titleAnim 2s infinite;
+}
+
+@keyframes titleAnim{
+    50%{
+        transform:scale(1.05);
+    }
+}
+
+/* GAME AREA */
+
+#game{
+    width:100%;
+    height:100vh;
+    position:relative;
+    overflow:hidden;
+    cursor:none;
+}
+
+/* PLAYER */
+
+.player{
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    position:absolute;
+    background:
+    radial-gradient(circle at 30% 30%,#fff,#00e5ff);
+    box-shadow:0 0 40px #00e5ff;
+    pointer-events:none;
+    transition:.05s linear;
+    z-index:50;
+}
+
+/* MONSTERS */
+
+.monster{
+    position:absolute;
+    border-radius:25px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:55px;
+    animation:monsterMove linear forwards;
+    user-select:none;
+}
+
+/* MOVE */
+
+@keyframes monsterMove{
+
+    from{
+        transform:translateY(-200px) rotate(0deg);
+    }
+
+    to{
+        transform:translateY(120vh) rotate(720deg);
+    }
+
+}
+
+/* PARTICLES */
+
+.particle{
+    position:absolute;
+    border-radius:50%;
+    pointer-events:none;
+    animation:explode .8s forwards;
+}
+
+@keyframes explode{
+
+    to{
+        transform:
+        translate(var(--x),var(--y))
+        scale(0);
+        opacity:0;
+    }
+
+}
+
+/* GAME OVER */
+
+.gameOver{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.8);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    color:white;
+    z-index:200;
+}
+
+.gameOver h1{
+    font-size:90px;
+    margin-bottom:20px;
+}
+
+.gameOver p{
+    font-size:40px;
+}
+
+.gameOver button{
+    margin-top:30px;
+    padding:18px 40px;
+    border:none;
+    border-radius:20px;
+    background:#00e5ff;
+    color:black;
+    font-size:28px;
+    cursor:pointer;
+}
+
+.gameOver button:hover{
+    transform:scale(1.1);
+}
+
+/* STARS */
+
+.star{
+    position:absolute;
+    background:white;
+    border-radius:50%;
+    animation:blink infinite alternate;
+}
+
+@keyframes blink{
+    from{
+        opacity:.2;
+    }
+
+    to{
+        opacity:1;
+    }
+}
+
+</style>
+<style>
+.hub-home-link{position:fixed;top:14px;left:14px;z-index:5000;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:10px 14px;border:2px solid rgba(255,255,255,.75);border-radius:999px;color:#16213f;background:rgba(255,255,255,.86);box-shadow:0 12px 28px rgba(20,30,60,.18);font-family:"Trebuchet MS","Comic Sans MS",Arial,sans-serif;font-size:14px;font-weight:900;text-decoration:none;backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease}.hub-home-link:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(20,30,60,.25)}
+html,body,#game{max-width:100%;touch-action:manipulation}.hud{width:min(92vw,720px);justify-content:center;flex-wrap:wrap;gap:10px}.box{min-height:46px;padding:10px 14px;font-size:clamp(16px,4vw,28px)}.title{top:clamp(74px,12vh,100px);font-size:clamp(30px,9vw,70px);padding:0 14px}.gameOver{padding:24px;text-align:center}.gameOver h1{font-size:clamp(42px,12vw,90px)}.gameOver p{font-size:clamp(22px,6vw,40px)}.gameOver button{min-height:54px;font-size:clamp(18px,5vw,28px)}@media(max-width:560px){.hud{top:62px}.hub-home-link{top:10px;left:10px;min-height:40px;padding:8px 12px}}
+</style>
+</head>
+
+<body>
+<a class="hub-home-link" href="../index.html">🏠 Home</a>
+
+<div class="hud">
+
+    <div class="box">
+        ⭐ Score :
+        <span id="score">0</span>
+    </div>
+
+    <div class="box">
+        ❤️ Lives :
+        <span id="lives">5</span>
+    </div>
+
+    <div class="box">
+        ⚡ Level :
+        <span id="level">1</span>
+    </div>
+
+</div>
+
+<div class="title">
+    👾 CRAZY MONSTER HUNT 👾
+</div>
+
+<div id="game">
+
+    <div class="player" id="player"></div>
+
+</div>
+
+<div class="gameOver" id="gameOver">
+
+    <h1>🎉 GAME OVER 🎉</h1>
+
+    <p id="finalScore"></p>
+
+    <button onclick="restartGame()">
+        PLAY AGAIN
+    </button>
+
+</div>
+
+<script>
+
+/* STARS */
+
+for(let i=0;i<120;i++){
+
+    const star = document.createElement("div");
+
+    star.className = "star";
+
+    const size = Math.random()*4+1;
+
+    star.style.width = size+"px";
+    star.style.height = size+"px";
+
+    star.style.left = Math.random()*100+"vw";
+    star.style.top = Math.random()*100+"vh";
+
+    star.style.animationDuration =
+    Math.random()*2+1+"s";
+
+    document.body.appendChild(star);
+}
+
+/* VARIABLES */
+
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+
+const scoreText =
+document.getElementById("score");
+
+const livesText =
+document.getElementById("lives");
+
+const levelText =
+document.getElementById("level");
+
+const gameOver =
+document.getElementById("gameOver");
+
+const finalScore =
+document.getElementById("finalScore");
+
+let score = 0;
+let lives = 5;
+let level = 1;
+let speed = 5;
+let gameRunning = true;
+
+/* PLAYER FOLLOW */
+
+document.addEventListener("mousemove",(e)=>{
+
+    player.style.left = e.clientX-45+"px";
+
+    player.style.top = e.clientY-45+"px";
+
+});
+
+/* CREATE MONSTER */
+
+function createMonster(){
+
+    if(!gameRunning) return;
+
+    const monster = document.createElement("div");
+
+    monster.className = "monster";
+
+    const emojis = [
+        "👾","👹","😈",
+        "👻","🤖","💀",
+        "🦇","👽"
+    ];
+
+    monster.innerHTML =
+    emojis[Math.floor(Math.random()*emojis.length)];
+
+    const size =
+    Math.random()*70+60;
+
+    monster.style.width = size+"px";
+    monster.style.height = size+"px";
+
+    monster.style.left =
+    Math.random()*
+    (window.innerWidth-size)+"px";
+
+    monster.style.top = "-150px";
+
+    monster.style.animationDuration =
+    Math.random()*3+speed+"s";
+
+    game.appendChild(monster);
+
+    /* CLICK */
+
+    monster.onclick = ()=>{
+
+        if(!gameRunning) return;
+
+        score++;
+
+        scoreText.innerHTML = score;
+
+        /* LEVEL UP */
+
+        if(score % 10 === 0){
+
+            level++;
+
+            levelText.innerHTML = level;
+
+            speed -= .3;
+
+            if(speed < 2)
+                speed = 2;
+        }
+
+        explode(
+            monster.offsetLeft +
+            size/2,
+
+            monster.offsetTop +
+            size/2
+        );
+
+        playSound();
+
+        monster.remove();
+    };
+
+    /* REMOVE */
+
+    setTimeout(()=>{
+
+        if(monster.parentNode){
+
+            monster.remove();
+
+            lives--;
+
+            livesText.innerHTML = lives;
+
+            dangerSound();
+
+            if(lives <= 0){
+
+                endGame();
+
+            }
+
+        }
+
+    },
+
+    (
+        parseFloat(
+        monster.style.animationDuration
+        )*1000
+    ));
+
+}
+
+/* PARTICLE EXPLOSION */
+
+function explode(x,y){
+
+    for(let i=0;i<25;i++){
+
+        const p =
+        document.createElement("div");
+
+        p.className = "particle";
+
+        const size =
+        Math.random()*12+5;
+
+        p.style.width = size+"px";
+        p.style.height = size+"px";
+
+        p.style.left = x+"px";
+        p.style.top = y+"px";
+
+        p.style.background =
+        `hsl(${Math.random()*360},
+        100%,60%)`;
+
+        p.style.setProperty(
+            "--x",
+            (Math.random()*300-150)+"px"
+        );
+
+        p.style.setProperty(
+            "--y",
+            (Math.random()*300-150)+"px"
+        );
+
+        game.appendChild(p);
+
+        setTimeout(()=>{
+            p.remove();
+        },800);
+
+    }
+
+}
+
+/* GAME LOOP */
+
+setInterval(()=>{
+
+    createMonster();
+
+},700);
+
+/* GAME OVER */
+
+function endGame(){
+
+    gameRunning = false;
+
+    gameOver.style.display = "flex";
+
+    finalScore.innerHTML =
+    "⭐ Final Score : " + score;
+
+}
+
+/* RESTART */
+
+function restartGame(){
+
+    location.reload();
+
+}
+
+/* SOUNDS */
+
+function playSound(){
+
+    const audio = new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+    );
+
+    audio.volume = .3;
+
+    audio.play();
+
+}
+
+function dangerSound(){
+
+    const audio = new Audio(
+    "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+    );
+
+    audio.volume = .2;
+
+    audio.play();
+
+}
+
+</script>
+
+</body>
+</html>
