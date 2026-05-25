@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -148,6 +149,158 @@ body{
 }
 
 </style>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turbo Racing</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, sans-serif;
+}
+
+body{
+    overflow:hidden;
+    background:#111;
+}
+
+/* GAME */
+
+.game{
+    width:400px;
+    height:100vh;
+    margin:auto;
+    position:relative;
+    overflow:hidden;
+    background:#444;
+    border-left:10px solid white;
+    border-right:10px solid white;
+}
+
+/* ROAD LINES */
+
+.line{
+    position:absolute;
+    width:10px;
+    height:120px;
+    background:white;
+    left:195px;
+    animation:road 1s linear infinite;
+}
+
+@keyframes road{
+
+    from{
+        top:-120px;
+    }
+
+    to{
+        top:100vh;
+    }
+
+}
+
+/* PLAYER CAR */
+
+.car{
+    position:absolute;
+    width:80px;
+    height:140px;
+    background:red;
+    bottom:30px;
+    left:160px;
+    border-radius:15px;
+    box-shadow:0 0 20px red;
+}
+
+/* WINDOWS */
+
+.car::before{
+    content:"";
+    position:absolute;
+    width:50px;
+    height:40px;
+    background:#9be7ff;
+    top:15px;
+    left:15px;
+    border-radius:10px;
+}
+
+.car::after{
+    content:"";
+    position:absolute;
+    width:50px;
+    height:40px;
+    background:#9be7ff;
+    bottom:15px;
+    left:15px;
+    border-radius:10px;
+}
+
+/* ENEMY */
+
+.enemy{
+    position:absolute;
+    width:80px;
+    height:140px;
+    border-radius:15px;
+}
+
+/* SCORE */
+
+.score{
+    position:fixed;
+    top:20px;
+    left:20px;
+    background:white;
+    padding:15px 25px;
+    border-radius:15px;
+    font-size:30px;
+    z-index:100;
+}
+
+/* GAME OVER */
+
+.gameOver{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    color:white;
+    z-index:200;
+}
+
+.gameOver h1{
+    font-size:80px;
+}
+
+.gameOver button{
+    margin-top:30px;
+    padding:15px 40px;
+    border:none;
+    border-radius:15px;
+    background:red;
+    color:white;
+    font-size:25px;
+    cursor:pointer;
+}
+
+.gameOver button:hover{
+    transform:scale(1.1);
+}
+
+</style>
+>>>>>>> 48b19438de3e499322a1626b9bd3f3e55c3712a7
 <style>
 .hub-home-link{position:fixed;top:14px;left:14px;z-index:5000;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:10px 14px;border:2px solid rgba(255,255,255,.75);border-radius:999px;color:#16213f;background:rgba(255,255,255,.86);box-shadow:0 12px 28px rgba(20,30,60,.18);font-family:"Trebuchet MS","Comic Sans MS",Arial,sans-serif;font-size:14px;font-weight:900;text-decoration:none;backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease}.hub-home-link:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(20,30,60,.25)}
 html,body{max-width:100%;touch-action:manipulation}.game{width:min(400px,100vw)}.line{left:calc(50% - 5px)}.score{top:66px;left:12px;font-size:clamp(18px,5vw,30px);padding:10px 14px}.gameOver{padding:24px;text-align:center}.gameOver h1{font-size:clamp(42px,12vw,80px)}.gameOver h2{font-size:clamp(20px,6vw,32px)}.gameOver button{min-height:52px;font-size:clamp(18px,5vw,25px)}@media(max-width:430px){.hub-home-link{top:10px;left:10px;min-height:40px;padding:8px 12px}.game{border-left-width:6px;border-right-width:6px}.score{right:12px;left:auto}}
@@ -156,6 +309,7 @@ html,body{max-width:100%;touch-action:manipulation}.game{width:min(400px,100vw)}
 
 <body>
 <a class="hub-home-link" href="../index.html">🏠 Home</a>
+<<<<<<< HEAD
 
 <div class="score">
     Score : <span id="score">0</span>
@@ -469,4 +623,260 @@ function restartGame(){
 </script>
 
 </body>
+=======
+
+<div class="score">
+    Score : <span id="score">0</span>
+</div>
+
+<div class="game" id="game">
+
+    <!-- ROAD LINES -->
+
+    <div class="line" style="top:-120px;"></div>
+    <div class="line" style="top:120px;"></div>
+    <div class="line" style="top:360px;"></div>
+    <div class="line" style="top:600px;"></div>
+
+    <!-- PLAYER -->
+
+    <div class="car" id="car"></div>
+
+</div>
+
+<div class="gameOver" id="gameOver">
+
+    <h1>💥 GAME OVER 💥</h1>
+
+    <h2 id="finalScore"></h2>
+
+    <button onclick="restartGame()">
+        PLAY AGAIN
+    </button>
+
+</div>
+
+<script>
+
+/* ELEMENTS */
+
+const car = document.getElementById("car");
+const game = document.getElementById("game");
+
+const scoreText =
+document.getElementById("score");
+
+const gameOver =
+document.getElementById("gameOver");
+
+const finalScore =
+document.getElementById("finalScore");
+
+/* VARIABLES */
+
+let carX = 160;
+
+let score = 0;
+
+let speed = 5;
+
+let gameRunning = true;
+
+const keys = {};
+
+/* KEY EVENTS */
+
+document.addEventListener("keydown",(e)=>{
+
+    keys[e.key] = true;
+
+});
+
+document.addEventListener("keyup",(e)=>{
+
+    keys[e.key] = false;
+
+});
+
+/* PLAYER MOVE */
+
+function moveCar(){
+
+    if(keys["ArrowLeft"] && carX > 0){
+
+        carX -= 7;
+
+    }
+
+    if(keys["ArrowRight"] && carX < 320){
+
+        carX += 7;
+
+    }
+
+    car.style.left = carX + "px";
+
+}
+
+/* CREATE ENEMY */
+
+function createEnemy(){
+
+    if(!gameRunning) return;
+
+    const enemy =
+    document.createElement("div");
+
+    enemy.classList.add("enemy");
+
+    enemy.style.background =
+    randomColor();
+
+    enemy.style.left =
+    Math.floor(Math.random()*4)*80+"px";
+
+    enemy.style.top = "-160px";
+
+    game.appendChild(enemy);
+
+    moveEnemy(enemy);
+
+}
+
+/* RANDOM COLOR */
+
+function randomColor(){
+
+    const colors = [
+        "#00e5ff",
+        "#ffea00",
+        "#00ff95",
+        "#ff00d4",
+        "#ff8800"
+    ];
+
+    return colors[
+        Math.floor(Math.random()*colors.length)
+    ];
+
+}
+
+/* MOVE ENEMY */
+
+function moveEnemy(enemy){
+
+    let enemyY = -160;
+
+    const interval = setInterval(()=>{
+
+        if(!gameRunning){
+
+            clearInterval(interval);
+
+            return;
+
+        }
+
+        enemyY += speed;
+
+        enemy.style.top = enemyY + "px";
+
+        /* COLLISION */
+
+        const enemyRect =
+        enemy.getBoundingClientRect();
+
+        const carRect =
+        car.getBoundingClientRect();
+
+        if(
+
+            enemyRect.left < carRect.right &&
+            enemyRect.right > carRect.left &&
+            enemyRect.top < carRect.bottom &&
+            enemyRect.bottom > carRect.top
+
+        ){
+
+            clearInterval(interval);
+
+            endGame();
+
+        }
+
+        /* REMOVE */
+
+        if(enemyY > window.innerHeight){
+
+            clearInterval(interval);
+
+            enemy.remove();
+
+            score++;
+
+            scoreText.innerHTML = score;
+
+            /* SPEED UP */
+
+            if(score % 5 === 0){
+
+                speed += 1;
+
+            }
+
+        }
+
+    },20);
+
+}
+
+/* GAME LOOP */
+
+function gameLoop(){
+
+    if(!gameRunning) return;
+
+    moveCar();
+
+    requestAnimationFrame(gameLoop);
+
+}
+
+/* CREATE ENEMIES */
+
+setInterval(()=>{
+
+    createEnemy();
+
+},1200);
+
+/* START */
+
+gameLoop();
+
+/* END GAME */
+
+function endGame(){
+
+    gameRunning = false;
+
+    gameOver.style.display = "flex";
+
+    finalScore.innerHTML =
+    "⭐ Your Score : " + score;
+
+}
+
+/* RESTART */
+
+function restartGame(){
+
+    location.reload();
+
+}
+
+</script>
+
+</body>
+>>>>>>> 48b19438de3e499322a1626b9bd3f3e55c3712a7
 </html>
