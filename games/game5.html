@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magic Memory Cards</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Comic Sans MS, cursive;
+}
+
+body{
+    min-height:100vh;
+    background:
+    linear-gradient(135deg,#667eea,#764ba2);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    overflow-x:hidden;
+    overflow-y:auto;
+    padding:clamp(64px,8vh,84px) 16px 24px;
+}
+
+/* TITLE */
+
+.title{
+    margin-top:0;
+    font-size:clamp(28px,6vw,60px);
+    color:white;
+    text-shadow:0 0 15px white;
+    animation:bounce 2s infinite;
+    text-align:center;
+    line-height:1.05;
+}
+
+@keyframes bounce{
+
+    50%{
+        transform:translateY(-10px);
+    }
+
+}
+
+/* HUD */
+
+.hud{
+    width:min(900px,100%);
+    margin-top:15px;
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:12px;
+}
+
+.box{
+    background:white;
+    min-height:48px;
+    padding:clamp(10px,2vw,15px) clamp(14px,3vw,25px);
+    border-radius:20px;
+    font-size:clamp(16px,3vw,25px);
+    box-shadow:0 5px 15px rgba(0,0,0,.3);
+}
+
+/* BOARD */
+
+.board{
+    width:min(900px,100%);
+    margin-top:clamp(14px,3vh,30px);
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:clamp(8px,2vw,20px);
+}
+
+/* CARD */
+
+.card{
+    width:100%;
+    aspect-ratio:1 / .72;
+    min-height:78px;
+    height:auto;
+    position:relative;
+    transform-style:preserve-3d;
+    transition:transform .5s;
+    cursor:pointer;
+    touch-action:manipulation;
+}
+
+.card.flip{
+    transform:rotateY(180deg);
+}
+
+/* SIDES */
+
+.front,
+.back{
+
+    position:absolute;
+    inset:0;
+    border-radius:25px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    backface-visibility:hidden;
+
+}
+
+/* FRONT */
+
+.front{
+    background:white;
+    font-size:clamp(34px,7vw,70px);
+    transform:rotateY(180deg);
+    box-shadow:0 5px 20px rgba(0,0,0,.3);
+}
+
+/* BACK */
+
+.back{
+    background:
+    linear-gradient(135deg,#ff9966,#ff5e62);
+    font-size:clamp(30px,6vw,60px);
+    color:white;
+    box-shadow:0 5px 20px rgba(0,0,0,.3);
+}
+
+/* WIN SCREEN */
+
+.win{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    color:white;
+    z-index:100;
+}
+
+.win h1{
+    font-size:clamp(42px,10vw,90px);
+    text-align:center;
+}
+
+.win p{
+    margin-top:20px;
+    font-size:clamp(22px,5vw,40px);
+    text-align:center;
+}
+
+.win button{
+    margin-top:30px;
+    min-height:52px;
+    padding:15px 40px;
+    border:none;
+    border-radius:20px;
+    background:#ffcc00;
+    color:black;
+    font-size:28px;
+    cursor:pointer;
+}
+
+.win button:hover{
+    transform:scale(1.1);
+}
+
+/* STARS */
+
+.star{
+    position:fixed;
+    background:white;
+    border-radius:50%;
+    animation:blink infinite alternate;
+    pointer-events:none;
+}
+
+@media (max-width:700px){
+    body{
+        padding-top:72px;
+    }
+
+    .board{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+    }
+}
+
+@media (max-width:430px){
+    body{
+        padding-left:10px;
+        padding-right:10px;
+    }
+
+    .board{
+        gap:7px;
+    }
+
+    .front,
+    .back{
+        border-radius:16px;
+    }
+}
+
+@keyframes blink{
+
+    from{
+        opacity:.2;
+    }
+
+    to{
+        opacity:1;
+    }
+
+}
+
+</style>
+<style>
+.hub-home-link{position:fixed;top:14px;left:14px;z-index:5000;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:10px 14px;border:2px solid rgba(255,255,255,.75);border-radius:999px;color:#16213f;background:rgba(255,255,255,.86);box-shadow:0 12px 28px rgba(20,30,60,.18);font-family:"Trebuchet MS","Comic Sans MS",Arial,sans-serif;font-size:14px;font-weight:900;text-decoration:none;backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease}.hub-home-link:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(20,30,60,.25)}
+</style>
+</head>
+
+<body >
+<a class="hub-home-link" href="../index.html">🏠 Home</a>
+
+<div class="title">
+    🧠 MAGIC MEMORY GAME 🧠
+</div>
+
+<div class="hud">
+
+    <div class="box">
+        ⭐ Score :
+        <span id="score">0</span>
+    </div>
+
+    <div class="box">
+        🎯 Moves :
+        <span id="moves">0</span>
+    </div>
+
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="win" id="win">
+
+    <h1>🎉 YOU WIN 🎉</h1>
+
+    <p id="finalText"></p>
+
+    <button onclick="restartGame()">
+        PLAY AGAIN
+    </button>
+
+</div>
+
+<script>
+
+/* STARS */
+
+for(let i=0;i<100;i++){
+
+    const star =
+    document.createElement("div");
+
+    star.className = "star";
+
+    const size =
+    Math.random()*4+1;
+
+    star.style.width = size+"px";
+    star.style.height = size+"px";
+
+    star.style.left =
+    Math.random()*100+"vw";
+
+    star.style.top =
+    Math.random()*100+"vh";
+
+    star.style.animationDuration =
+    Math.random()*2+1+"s";
+
+    document.body.appendChild(star);
+}
+
+/* EMOJIS */
+
+const emojis = [
+
+    "🐶","🐶",
+    "🐱","🐱",
+    "🐸","🐸",
+    "🦄","🦄",
+    "🐼","🐼",
+    "🐵","🐵",
+    "🦊","🦊",
+    "🐯","🐯"
+
+];
+
+/* SHUFFLE */
+
+emojis.sort(()=>Math.random()-0.5);
+
+/* ELEMENTS */
+
+const board =
+document.getElementById("board");
+
+const scoreText =
+document.getElementById("score");
+
+const movesText =
+document.getElementById("moves");
+
+const win =
+document.getElementById("win");
+
+const finalText =
+document.getElementById("finalText");
+
+/* VARIABLES */
+
+let firstCard = null;
+let secondCard = null;
+
+let lockBoard = false;
+
+let score = 0;
+let moves = 0;
+
+/* CREATE CARDS */
+
+emojis.forEach((emoji)=>{
+
+    const card =
+    document.createElement("div");
+
+    card.className = "card";
+
+    card.innerHTML = `
+
+        <div class="front">
+            ${emoji}
+        </div>
+
+        <div class="back">
+            ❓
+        </div>
+
+    `;
+
+    board.appendChild(card);
+
+    /* CLICK */
+
+    card.addEventListener("click",()=>{
+
+        if(
+            lockBoard ||
+            card === firstCard ||
+            card.classList.contains("flip")
+        ) return;
+
+        flipSound();
+
+        card.classList.add("flip");
+
+        if(!firstCard){
+
+            firstCard = card;
+
+            return;
+
+        }
+
+        secondCard = card;
+
+        moves++;
+
+        movesText.innerHTML = moves;
+
+        checkMatch();
+
+    });
+
+});
+
+/* CHECK */
+
+function checkMatch(){
+
+    const emoji1 =
+    firstCard.querySelector(".front")
+    .innerHTML;
+
+    const emoji2 =
+    secondCard.querySelector(".front")
+    .innerHTML;
+
+    /* MATCH */
+
+    if(emoji1 === emoji2){
+
+        successSound();
+
+        score++;
+
+        scoreText.innerHTML = score;
+
+        firstCard = null;
+        secondCard = null;
+
+        /* WIN */
+
+        if(score === 8){
+
+            setTimeout(()=>{
+
+                win.style.display = "flex";
+
+                finalText.innerHTML =
+                "🎯 Moves : " + moves;
+
+            },500);
+
+        }
+
+    }
+
+    /* NO MATCH */
+
+    else{
+
+        lockBoard = true;
+
+        wrongSound();
+
+        setTimeout(()=>{
+
+            firstCard.classList.remove("flip");
+
+            secondCard.classList.remove("flip");
+
+            firstCard = null;
+            secondCard = null;
+
+            lockBoard = false;
+
+        },1000);
+
+    }
+
+}
+
+/* RESTART */
+
+function restartGame(){
+
+    location.reload();
+
+}
+
+/* SOUNDS */
+
+function flipSound(){
+
+    const audio =
+    new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
+    );
+
+    audio.volume = .2;
+
+    audio.play();
+
+}
+
+function successSound(){
+
+    const audio =
+    new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg"
+    );
+
+    audio.volume = .3;
+
+    audio.play();
+
+}
+
+function wrongSound(){
+
+    const audio =
+    new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg"
+    );
+
+    audio.volume = .2;
+
+    audio.play();
+
+}
+
+</script>
+
+</body>
+</html>

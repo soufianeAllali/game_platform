@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frog Jump Adventure</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Comic Sans MS, cursive;
+}
+
+body{
+    overflow:hidden;
+    background:
+    linear-gradient(to bottom,#4facfe,#00f2fe);
+}
+
+/* GAME */
+
+#game{
+    width:100%;
+    height:100vh;
+    position:relative;
+    overflow:hidden;
+}
+
+/* HUD */
+
+.hud{
+    position:fixed;
+    top:20px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    gap:20px;
+    z-index:100;
+}
+
+.box{
+    background:white;
+    padding:15px 25px;
+    border-radius:20px;
+    font-size:26px;
+    box-shadow:0 5px 15px rgba(0,0,0,.3);
+}
+
+/* TITLE */
+
+.title{
+    position:absolute;
+    top:90px;
+    width:100%;
+    text-align:center;
+    font-size:60px;
+    color:white;
+    text-shadow:0 0 15px white;
+    animation:titleAnim 2s infinite;
+}
+
+@keyframes titleAnim{
+
+    50%{
+        transform:translateY(-8px);
+    }
+
+}
+
+/* RIVER */
+
+.river{
+    position:absolute;
+    bottom:0;
+    width:100%;
+    height:320px;
+    background:
+    linear-gradient(#0099ff,#0066cc);
+}
+
+/* LILYPADS */
+
+.pad{
+    position:absolute;
+    width:130px;
+    height:40px;
+    background:#33cc33;
+    border-radius:50%;
+    box-shadow:0 0 20px rgba(0,0,0,.3);
+}
+
+/* FROG */
+
+.frog{
+    position:absolute;
+    width:90px;
+    height:90px;
+    background:#66ff66;
+    border-radius:50%;
+    bottom:260px;
+    left:200px;
+    transition:.15s linear;
+    box-shadow:0 0 25px #00ff66;
+}
+
+/* EYES */
+
+.eye{
+    position:absolute;
+    width:18px;
+    height:18px;
+    background:white;
+    border-radius:50%;
+    top:15px;
+}
+
+.eye::after{
+    content:"";
+    position:absolute;
+    width:8px;
+    height:8px;
+    background:black;
+    border-radius:50%;
+    top:5px;
+    left:5px;
+}
+
+.eye1{
+    left:18px;
+}
+
+.eye2{
+    right:18px;
+}
+
+/* MOUTH */
+
+.mouth{
+    position:absolute;
+    width:40px;
+    height:20px;
+    border-bottom:5px solid black;
+    border-radius:0 0 30px 30px;
+    bottom:18px;
+    left:25px;
+}
+
+/* COINS */
+
+.coin{
+    position:absolute;
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    background:gold;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:30px;
+    box-shadow:0 0 20px gold;
+    animation:spin 1s infinite linear;
+}
+
+@keyframes spin{
+
+    from{
+        transform:rotateY(0deg);
+    }
+
+    to{
+        transform:rotateY(360deg);
+    }
+
+}
+
+/* CROCODILE */
+
+.croc{
+    position:absolute;
+    width:150px;
+    height:60px;
+    background:#1d8348;
+    border-radius:30px;
+    box-shadow:0 0 15px rgba(0,0,0,.4);
+}
+
+.croc::before{
+
+    content:"🐊";
+
+    position:absolute;
+    font-size:45px;
+
+    left:45px;
+    top:5px;
+}
+
+/* GAME OVER */
+
+.gameOver{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.8);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    color:white;
+    z-index:200;
+}
+
+.gameOver h1{
+    font-size:90px;
+}
+
+.gameOver button{
+    margin-top:30px;
+    padding:15px 40px;
+    border:none;
+    border-radius:20px;
+    background:#00ff66;
+    color:black;
+    font-size:28px;
+    cursor:pointer;
+}
+
+.gameOver button:hover{
+    transform:scale(1.1);
+}
+
+</style>
+<style>
+.hub-home-link{position:fixed;top:14px;left:14px;z-index:5000;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:10px 14px;border:2px solid rgba(255,255,255,.75);border-radius:999px;color:#16213f;background:rgba(255,255,255,.86);box-shadow:0 12px 28px rgba(20,30,60,.18);font-family:"Trebuchet MS","Comic Sans MS",Arial,sans-serif;font-size:14px;font-weight:900;text-decoration:none;backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease}.hub-home-link:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(20,30,60,.25)}
+html,body,#game{max-width:100%;touch-action:manipulation}.hud{width:min(92vw,720px);justify-content:center;flex-wrap:wrap;gap:10px}.box{min-height:46px;padding:10px 14px;font-size:clamp(16px,4vw,26px)}.title{top:clamp(76px,12vh,90px);font-size:clamp(30px,9vw,60px);padding:0 14px}.gameOver{padding:24px;text-align:center}.gameOver h1{font-size:clamp(42px,12vw,90px)}.gameOver h2{font-size:clamp(20px,6vw,34px)}.gameOver button{min-height:54px;font-size:clamp(18px,5vw,28px)}@media(max-width:560px){.hud{top:62px}.hub-home-link{top:10px;left:10px;min-height:40px;padding:8px 12px}.water{height:260px}}
+</style>
+</head>
+
+<body>
+<a class="hub-home-link" href="../index.html">🏠 Home</a>
+
+<div class="hud">
+
+    <div class="box">
+        💰 Coins :
+        <span id="score">0</span>
+    </div>
+
+    <div class="box">
+        ❤️ Lives :
+        <span id="lives">3</span>
+    </div>
+
+</div>
+
+<div class="title">
+    🐸 FROG JUMP ADVENTURE 🐸
+</div>
+
+<div id="game">
+
+    <!-- RIVER -->
+
+    <div class="river"></div>
+
+    <!-- PADS -->
+
+    <div class="pad" style="left:100px;bottom:220px;"></div>
+    <div class="pad" style="left:350px;bottom:300px;"></div>
+    <div class="pad" style="left:650px;bottom:220px;"></div>
+    <div class="pad" style="left:950px;bottom:310px;"></div>
+    <div class="pad" style="left:1250px;bottom:230px;"></div>
+
+    <!-- FROG -->
+
+    <div class="frog" id="frog">
+
+        <div class="eye eye1"></div>
+        <div class="eye eye2"></div>
+
+        <div class="mouth"></div>
+
+    </div>
+
+</div>
+
+<div class="gameOver" id="gameOver">
+
+    <h1>💀 GAME OVER 💀</h1>
+
+    <h2 id="finalText"></h2>
+
+    <button onclick="restartGame()">
+        PLAY AGAIN
+    </button>
+
+</div>
+
+<script>
+
+/* ELEMENTS */
+
+const frog =
+document.getElementById("frog");
+
+const game =
+document.getElementById("game");
+
+const scoreText =
+document.getElementById("score");
+
+const livesText =
+document.getElementById("lives");
+
+const gameOver =
+document.getElementById("gameOver");
+
+const finalText =
+document.getElementById("finalText");
+
+/* VARIABLES */
+
+let frogX = 200;
+let frogY = 260;
+
+let score = 0;
+let lives = 3;
+
+let gameRunning = true;
+
+/* MOVE */
+
+document.addEventListener("keydown",(e)=>{
+
+    if(!gameRunning) return;
+
+    if(e.key === "ArrowRight"){
+
+        frogX += 70;
+
+    }
+
+    if(e.key === "ArrowLeft"){
+
+        frogX -= 70;
+
+    }
+
+    if(e.key === "ArrowUp"){
+
+        frogY += 70;
+
+    }
+
+    if(e.key === "ArrowDown"){
+
+        frogY -= 70;
+
+    }
+
+    frog.style.left = frogX + "px";
+
+    frog.style.bottom = frogY + "px";
+
+});
+
+/* TOUCH CONTROLS */
+
+let touchTargetX = 0;
+let touchTargetY = 0;
+let touchMoveTimer = null;
+
+function applyFrogPosition(){
+
+    frogX = Math.max(0,Math.min(frogX,window.innerWidth - frog.offsetWidth));
+    frogY = Math.max(0,Math.min(frogY,window.innerHeight - frog.offsetHeight));
+
+    frog.style.left = frogX + "px";
+    frog.style.bottom = frogY + "px";
+}
+
+function stepFrogTowardTouch(){
+
+    if(!gameRunning) return;
+
+    const rect = frog.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = touchTargetX - centerX;
+    const dy = touchTargetY - centerY;
+
+    if(Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+
+    if(Math.abs(dx) > Math.abs(dy)){
+
+        frogX += dx > 0 ? 70 : -70;
+
+    }else{
+
+        frogY += dy < 0 ? 70 : -70;
+    }
+
+    applyFrogPosition();
+}
+
+function startFrogTouch(e){
+
+    if(!gameRunning || e.target.closest(".hub-home-link") || e.target.closest("button")) return;
+
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    touchTargetX = touch.clientX;
+    touchTargetY = touch.clientY;
+
+    stepFrogTowardTouch();
+    clearInterval(touchMoveTimer);
+    touchMoveTimer = setInterval(stepFrogTowardTouch,170);
+}
+
+document.addEventListener("touchstart",startFrogTouch,{passive:false});
+
+document.addEventListener("touchmove",(e)=>{
+
+    if(!gameRunning || e.target.closest(".hub-home-link") || e.target.closest("button")) return;
+
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    touchTargetX = touch.clientX;
+    touchTargetY = touch.clientY;
+
+},{passive:false});
+
+document.addEventListener("touchend",()=>{
+
+    clearInterval(touchMoveTimer);
+    touchMoveTimer = null;
+
+});
+
+let mouseMovingFrog = false;
+
+document.addEventListener("mousedown",(e)=>{
+
+    if(e.target.closest(".hub-home-link")) return;
+
+    mouseMovingFrog = true;
+    touchTargetX = e.clientX;
+    touchTargetY = e.clientY;
+    stepFrogTowardTouch();
+    clearInterval(touchMoveTimer);
+    touchMoveTimer = setInterval(stepFrogTowardTouch,170);
+
+});
+
+document.addEventListener("mousemove",(e)=>{
+
+    if(mouseMovingFrog){
+        touchTargetX = e.clientX;
+        touchTargetY = e.clientY;
+    }
+
+});
+
+document.addEventListener("mouseup",()=>{
+
+    mouseMovingFrog = false;
+    clearInterval(touchMoveTimer);
+    touchMoveTimer = null;
+
+});
+
+/* CREATE COINS */
+
+function createCoin(){
+
+    if(!gameRunning) return;
+
+    const coin =
+    document.createElement("div");
+
+    coin.className = "coin";
+
+    coin.innerHTML = "💰";
+
+    coin.style.left =
+    Math.random()*
+    (window.innerWidth - 60)
+    +"px";
+
+    coin.style.bottom =
+    Math.random()*350 + 150
+    +"px";
+
+    game.appendChild(coin);
+
+    checkCoin(coin);
+
+}
+
+/* CHECK COIN */
+
+function checkCoin(coin){
+
+    const interval =
+    setInterval(()=>{
+
+        if(!gameRunning){
+
+            clearInterval(interval);
+
+            return;
+
+        }
+
+        const coinRect =
+        coin.getBoundingClientRect();
+
+        const frogRect =
+        frog.getBoundingClientRect();
+
+        if(
+
+            coinRect.left < frogRect.right &&
+            coinRect.right > frogRect.left &&
+            coinRect.top < frogRect.bottom &&
+            coinRect.bottom > frogRect.top
+
+        ){
+
+            score++;
+
+            scoreText.innerHTML = score;
+
+            coin.remove();
+
+            collectSound();
+
+            clearInterval(interval);
+
+        }
+
+    },20);
+
+}
+
+/* CREATE CROCODILE */
+
+function createCroc(){
+
+    if(!gameRunning) return;
+
+    const croc =
+    document.createElement("div");
+
+    croc.className = "croc";
+
+    croc.style.left = "-200px";
+
+    croc.style.bottom =
+    Math.random()*250 + 120
+    +"px";
+
+    game.appendChild(croc);
+
+    let x = -200;
+
+    const speed =
+    Math.random()*5 + 4;
+
+    const interval =
+    setInterval(()=>{
+
+        if(!gameRunning){
+
+            clearInterval(interval);
+
+            return;
+
+        }
+
+        x += speed;
+
+        croc.style.left = x + "px";
+
+        const crocRect =
+        croc.getBoundingClientRect();
+
+        const frogRect =
+        frog.getBoundingClientRect();
+
+        /* COLLISION */
+
+        if(
+
+            crocRect.left < frogRect.right &&
+            crocRect.right > frogRect.left &&
+            crocRect.top < frogRect.bottom &&
+            crocRect.bottom > frogRect.top
+
+        ){
+
+            lives--;
+
+            livesText.innerHTML = lives;
+
+            hitSound();
+
+            croc.remove();
+
+            clearInterval(interval);
+
+            if(lives <= 0){
+
+                endGame();
+
+            }
+
+        }
+
+        if(x > window.innerWidth){
+
+            croc.remove();
+
+            clearInterval(interval);
+
+        }
+
+    },20);
+
+}
+
+/* SPAWN */
+
+setInterval(()=>{
+
+    createCoin();
+
+},1500);
+
+setInterval(()=>{
+
+    createCroc();
+
+},2500);
+
+/* END */
+
+function endGame(){
+
+    gameRunning = false;
+
+    gameOver.style.display = "flex";
+
+    finalText.innerHTML =
+    "⭐ Coins Collected : " + score;
+
+}
+
+/* RESTART */
+
+function restartGame(){
+
+    location.reload();
+
+}
+
+/* SOUNDS */
+
+function collectSound(){
+
+    const audio =
+    new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
+    );
+
+    audio.volume = .3;
+
+    audio.play();
+
+}
+
+function hitSound(){
+
+    const audio =
+    new Audio(
+    "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+    );
+
+    audio.volume = .2;
+
+    audio.play();
+
+}
+
+</script>
+
+</body>
+</html>
