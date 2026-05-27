@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍌 Banana Escape</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Comic Sans MS, cursive;
+}
+
+body{
+    background: linear-gradient(135deg,#ffe259,#ffa751);
+    overflow:hidden;
+}
+
+/* HUD */
+.hud{
+    position:fixed;
+    top:10px;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    z-index:1000;
+}
+
+.box{
+    background:white;
+    padding:10px 15px;
+    border-radius:15px;
+    font-size:18px;
+    box-shadow:0 5px 15px rgba(0,0,0,.2);
+}
+
+/* GAME AREA */
+#game{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+}
+
+/* PLAYER */
+.player{
+    position:absolute;
+    width:60px;
+    height:60px;
+    font-size:40px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#fff;
+    border-radius:20px;
+    box-shadow:0 0 20px rgba(0,0,0,.3);
+    transition:0.08s;
+}
+
+/* BANANA */
+.banana{
+    position:absolute;
+    font-size:35px;
+    animation:float 1s infinite alternate;
+}
+
+@keyframes float{
+    from{transform:translateY(0px);}
+    to{transform:translateY(-10px);}
+}
+
+/* TRAP */
+.trap{
+    position:absolute;
+    font-size:35px;
+    animation:shake 0.6s infinite;
+}
+
+@keyframes shake{
+    0%{transform:rotate(0deg);}
+    50%{transform:rotate(10deg);}
+    100%{transform:rotate(-10deg);}
+}
+
+/* EXIT */
+.exit{
+    position:absolute;
+    font-size:45px;
+    animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+    50%{transform:scale(1.2);}
+}
+
+/* MESSAGE */
+.message{
+    position:fixed;
+    bottom:20px;
+    width:100%;
+    text-align:center;
+    font-size:22px;
+    color:#333;
+    font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="hud">
+    <div class="box">🍌 Bananas: <span id="score">0</span></div>
+    <div class="box">⏱ Time: <span id="time">60</span></div>
+    <div class="box">🚀 Level: <span id="level">1</span></div>
+</div>
+
+<div id="game"></div>
+
+<div class="message" id="message">Collect bananas & escape!</div>
+
+<script>
+
+const game = document.getElementById("game");
+const scoreEl = document.getElementById("score");
+const timeEl = document.getElementById("time");
+const levelEl = document.getElementById("level");
+const message = document.getElementById("message");
+
+let player = {x:100, y:100};
+let score = 0;
+let time = 60;
+let level = 1;
+
+let bananas = [];
+let traps = [];
+let exit;
+
+/* PLAYER */
+const p = document.createElement("div");
+p.className = "player";
+p.innerHTML = "🐵";
+game.appendChild(p);
+
+/* MOVE PLAYER */
+document.addEventListener("keydown",(e)=>{
+
+    if(e.key==="ArrowUp") player.y -= 20;
+    if(e.key==="ArrowDown") player.y += 20;
+    if(e.key==="ArrowLeft") player.x -= 20;
+    if(e.key==="ArrowRight") player.x += 20;
+
+    updatePlayer();
+});
+
+/* TOUCH MOVE */
+let startX, startY;
+
+game.addEventListener("touchstart",(e)=>{
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+});
+
+game.addEventListener("touchmove",(e)=>{
+
+    let dx = e.touches[0].clientX - startX;
+    let dy = e.touches[0].clientY - startY;
+
+    if(Math.abs(dx) > Math.abs(dy)){
+        player.x += dx > 0 ? 20 : -20;
+    }else{
+        player.y += dy > 0 ? 20 : -20;
+    }
+
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+
+    updatePlayer();
+});
+
+/* UPDATE */
+function updatePlayer(){
+
+    p.style.left = player.x + "px";
+    p.style.top = player.y + "px";
+
+    checkBanana();
+    checkTrap();
+    checkExit();
+}
+
+/* SPAWN */
+function spawn(){
+
+    game.querySelectorAll(".banana,.trap,.exit").forEach(e=>e.remove());
+
+    bananas = [];
+    traps = [];
+
+    // bananas
+    for(let i=0;i<10;i++){
+        let b = document.createElement("div");
+        b.className = "banana";
+        b.innerHTML = "🍌";
+        b.style.left = Math.random()*window.innerWidth + "px";
+        b.style.top = Math.random()*window.innerHeight + "px";
+        game.appendChild(b);
+        bananas.push(b);
+    }
+
+    // traps
+    for(let i=0;i<level+3;i++){
+        let t = document.createElement("div");
+        t.className = "trap";
+        t.innerHTML = "💣";
+        t.style.left = Math.random()*window.innerWidth + "px";
+        t.style.top = Math.random()*window.innerHeight + "px";
+        game.appendChild(t);
+        traps.push(t);
+    }
+
+    // exit
+    exit = document.createElement("div");
+    exit.className = "exit";
+    exit.innerHTML = "🚪";
+    exit.style.left = Math.random()*window.innerWidth + "px";
+    exit.style.top = Math.random()*window.innerHeight + "px";
+    game.appendChild(exit);
+}
+
+/* CHECK BANANA */
+function checkBanana(){
+
+    bananas.forEach((b,i)=>{
+        if(isClose(b)){
+            b.remove();
+            bananas.splice(i,1);
+            score++;
+            scoreEl.innerText = score;
+            message.innerText = "Yummy 🍌";
+        }
+    });
+
+}
+
+/* CHECK TRAP */
+function checkTrap(){
+
+    traps.forEach(t=>{
+        if(isClose(t)){
+            message.innerText = "💥 Ouch!";
+            player.x = 100;
+            player.y = 100;
+        }
+    });
+
+}
+
+/* CHECK EXIT */
+function checkExit(){
+
+    if(exit && isClose(exit) && bananas.length===0){
+
+        level++;
+        levelEl.innerText = level;
+
+        time = 60;
+        spawn();
+        message.innerText = "Next level 🚀";
+    }
+}
+
+/* DISTANCE */
+function isClose(el){
+
+    let ex = el.offsetLeft;
+    let ey = el.offsetTop;
+
+    return Math.abs(player.x - ex) < 40 &&
+           Math.abs(player.y - ey) < 40;
+}
+
+/* TIMER */
+setInterval(()=>{
+    time--;
+    timeEl.innerText = time;
+
+    if(time<=0){
+        message.innerText = "Game Over 😢";
+        location.reload();
+    }
+},1000);
+
+/* START */
+spawn();
+updatePlayer();
+
+</script>
+
+</body>
+</html>

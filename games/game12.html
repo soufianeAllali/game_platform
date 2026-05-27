@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔥 ULTRA MAZE QUEST 🔥</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Comic Sans MS,cursive;
+}
+
+body{
+    overflow:hidden;
+    background:
+    linear-gradient(135deg,#0f172a,#111827);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+}
+
+/* TITLE */
+
+.title{
+    color:white;
+    font-size:45px;
+    margin-bottom:12px;
+    text-shadow:0 0 20px cyan;
+    animation:pulse 2s infinite;
+}
+
+@keyframes pulse{
+    50%{
+        transform:scale(1.05);
+    }
+}
+
+/* HUD */
+
+.hud{
+    display:flex;
+    gap:12px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.box{
+    background:white;
+    padding:10px 18px;
+    border-radius:18px;
+    font-size:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,.3);
+}
+
+/* GAME */
+
+#game{
+    position:relative;
+    width:95vmin;
+    height:95vmin;
+    max-width:720px;
+    max-height:720px;
+    background:#0b1220;
+    overflow:hidden;
+    border:8px solid white;
+    border-radius:25px;
+    box-shadow:0 0 40px rgba(0,255,255,.3);
+}
+
+/* CELLS */
+
+.cell{
+    position:absolute;
+}
+
+/* WALL */
+
+.wall{
+    background:
+    linear-gradient(135deg,#00c6ff,#0072ff);
+    border-radius:10px;
+    box-shadow:0 0 10px cyan;
+}
+
+/* FLOOR */
+
+.floor{
+    background:#1e293b;
+}
+
+/* PLAYER */
+
+.player{
+    position:absolute;
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+    background:
+    linear-gradient(135deg,#ffe259,#ffa751);
+    box-shadow:0 0 20px gold;
+    z-index:100;
+    transition:.08s linear;
+}
+
+/* EXIT */
+
+.exit{
+    position:absolute;
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+    background:
+    linear-gradient(135deg,#ff416c,#ff4b2b);
+    box-shadow:0 0 20px red;
+    animation:doorGlow 1s infinite alternate;
+}
+
+@keyframes doorGlow{
+    from{
+        transform:scale(1);
+    }
+    to{
+        transform:scale(1.1);
+    }
+}
+
+/* ENEMY */
+
+.enemy{
+    position:absolute;
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:22px;
+    background:
+    linear-gradient(135deg,#ff0000,#8b0000);
+    box-shadow:0 0 20px red;
+    z-index:90;
+}
+
+/* KEY */
+
+.key{
+    position:absolute;
+    width:40px;
+    height:40px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+    animation:keyFloat 1s infinite alternate;
+}
+
+@keyframes keyFloat{
+    from{
+        transform:translateY(0px);
+    }
+    to{
+        transform:translateY(-6px);
+    }
+}
+
+/* COIN */
+
+.coin{
+    position:absolute;
+    width:35px;
+    height:35px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:22px;
+    animation:coinSpin 1s infinite linear;
+}
+
+@keyframes coinSpin{
+    from{
+        transform:rotateY(0deg);
+    }
+    to{
+        transform:rotateY(360deg);
+    }
+}
+
+/* MESSAGE */
+
+.message{
+    position:absolute;
+    top:10px;
+    width:100%;
+    text-align:center;
+    color:white;
+    font-size:24px;
+    z-index:200;
+    text-shadow:0 0 10px black;
+}
+
+/* FOG */
+
+#fog{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:150;
+}
+
+/* CONTROLS */
+
+.controls{
+    margin-top:15px;
+    display:grid;
+    grid-template-columns:80px 80px 80px;
+    gap:10px;
+}
+
+.controls button{
+    width:80px;
+    height:80px;
+    border:none;
+    border-radius:20px;
+    font-size:30px;
+    cursor:pointer;
+    background:white;
+}
+
+.empty{
+    visibility:hidden;
+}
+
+@media(min-width:900px){
+    .controls{
+        display:none;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="title">
+    🌀 ULTRA MAZE QUEST 🌀
+</div>
+
+<div class="hud">
+
+    <div class="box">
+        ⭐ Score:
+        <span id="score">0</span>
+    </div>
+
+    <div class="box">
+        🚀 Level:
+        <span id="level">1</span>
+    </div>
+
+    <div class="box">
+        ❤️ Lives:
+        <span id="lives">3</span>
+    </div>
+
+</div>
+
+<div id="game">
+
+    <canvas id="fog"></canvas>
+
+    <div class="message" id="message">
+        Find the key 🔑
+    </div>
+
+</div>
+
+<div class="controls">
+
+    <div class="empty"></div>
+    <button onclick="move(0,-1)">⬆️</button>
+    <div class="empty"></div>
+
+    <button onclick="move(-1,0)">⬅️</button>
+    <button onclick="move(0,1)">⬇️</button>
+    <button onclick="move(1,0)">➡️</button>
+
+</div>
+
+<script>
+
+/* LEVELS */
+
+const levels = [
+
+/* LEVEL 1 - VERY EASY */
+[
+"#################",
+"#P.............E#",
+"#...............#",
+"#...............#",
+"#...............#",
+"#......K........#",
+"#...............#",
+"#.......C.......#",
+"#...............#",
+"#################"
+],
+
+/* LEVEL 2 - EASY */
+[
+"#################",
+"#P.....#.......E#",
+"#......#........#",
+"#..#######......#",
+"#...............#",
+"#.....K.........#",
+"#.......###.....#",
+"#.....C.........#",
+"#...............#",
+"#################"
+],
+
+/* LEVEL 3 - EASY+ */
+[
+"#################",
+"#P....#....#...E#",
+"#.##..#..#..#...#",
+"#....###..###...#",
+"#...............#",
+"#..K....###.....#",
+"#....#..........#",
+"#..C..#.........#",
+"#......###......#",
+"#################"
+],
+
+/* LEVEL 4 - MEDIUM */
+[
+"#################",
+"#P..#..#..#....E#",
+"#.#.#..#..###...#",
+"#.#....#....#...#",
+"#.######.###.#..#",
+"#....K....#.....#",
+"###.###.#####...#",
+"#...C....#......#",
+"#..###...........#",
+"#################"
+],
+
+/* LEVEL 5 - MEDIUM+ */
+[
+"#################",
+"#P.#..#..#..#..E#",
+"#.#.#....#.#....#",
+"#..###.###.###..#",
+"#......#.....#..#",
+"#..K...###...#..#",
+"###.#######.###.#",
+"#...C.....#.....#",
+"#..###..###.....#",
+"#################"
+],
+
+/* LEVEL 6 - HARD */
+[
+"#################",
+"#P..#..#..#..#.E#",
+"#.#.#..#..#.#...#",
+"#.#.####.###.#..#",
+"#.....#.....#...#",
+"#.###.#.###.#...#",
+"#..K..#.....#...#",
+"###.#####.#####.#",
+"#...C.....#.....#",
+"#################"
+],
+
+/* LEVEL 7 - HARD+ */
+[
+"#################",
+"#P.#..#..#..#..E#",
+"#.#.#.#.#.#.#...#",
+"#.#...#...#..#..#",
+"#.#####.#####.#.#",
+"#.....K.....#...#",
+"#.###.#####.###.#",
+"#...C.....#.....#",
+"#..###..###.....#",
+"#################"
+],
+
+/* LEVEL 8 - VERY HARD */
+[
+"#################",
+"#P..###..#..#..E#",
+"#.#...#..#..#...#",
+"#.###.#.#######.#",
+"#...#.#.....#...#",
+"###.#.#####.#.#.#",
+"#...#...K...#...#",
+"#.#####.###.###.#",
+"#..C.....#......#",
+"#################"
+],
+
+/* LEVEL 9 - EXTREME */
+[
+"#################",
+"#P..#..#..#..#.E#",
+"#.#.#.#.#.#.#.#.#",
+"#.#...#...#...#.#",
+"#.###.#####.###.#",
+"#...#..K..#.....#",
+"###.#######.###.#",
+"#...C.....#.....#",
+"#..###..###.....#",
+"#################"
+],
+
+/* LEVEL 10 - INSANE */
+[
+"#################",
+"#P.#.#.#.#.#.#.E#",
+"#.#.#.#.#.#.#.#.#",
+"#.#.#...#...#.#.#",
+"#.###.#######.###",
+"#...#..K..#.....#",
+"#.#.#######.###.#",
+"#...C.....#.....#",
+"#..###..###.....#",
+"#################"
+]
+
+];
+
+let currentLevel = 0;
+
+/* VARIABLES */
+
+const game =
+document.getElementById("game");
+
+const scoreEl =
+document.getElementById("score");
+
+const levelEl =
+document.getElementById("level");
+
+const livesEl =
+document.getElementById("lives");
+
+const message =
+document.getElementById("message");
+
+const fog =
+document.getElementById("fog");
+
+const ctx =
+fog.getContext("2d");
+
+fog.width = 720;
+fog.height = 720;
+
+const size = 40;
+
+let score = 0;
+let lives = 3;
+
+let playerX = 0;
+let playerY = 0;
+
+let walls = [];
+let enemies = [];
+let coins = [];
+
+let hasKey = false;
+
+/* PLAYER */
+
+const player =
+document.createElement("div");
+
+player.className = "player";
+
+player.innerHTML = "😎";
+
+game.appendChild(player);
+
+/* LOAD LEVEL */
+
+function loadLevel(index){
+
+    hasKey = false;
+
+    walls = [];
+    enemies = [];
+    coins = [];
+
+    game.querySelectorAll(
+        ".cell,.enemy,.coin,.key,.exit"
+    ).forEach(el=>el.remove());
+
+    const map = levels[index];
+
+    map.forEach((row,y)=>{
+
+        [...row].forEach((cell,x)=>{
+
+            const div =
+            document.createElement("div");
+
+            div.className =
+            "cell";
+
+            div.style.left =
+            x*size+"px";
+
+            div.style.top =
+            y*size+"px";
+
+            div.style.width =
+            size+"px";
+
+            div.style.height =
+            size+"px";
+
+            if(cell === "#"){
+
+                div.classList.add("wall");
+
+                walls.push({x,y});
+
+            }else{
+
+                div.classList.add("floor");
+
+            }
+
+            game.appendChild(div);
+
+            /* PLAYER */
+
+            if(cell === "P"){
+
+                playerX = x;
+                playerY = y;
+
+            }
+
+            /* EXIT */
+
+            if(cell === "E"){
+
+                const exit =
+                document.createElement("div");
+
+                exit.className = "exit";
+
+                exit.innerHTML = "🚪";
+
+                exit.style.left =
+                x*size+"px";
+
+                exit.style.top =
+                y*size+"px";
+
+                exit.id = "exit";
+
+                game.appendChild(exit);
+
+            }
+
+            /* KEY */
+
+            if(cell === "K"){
+
+                const key =
+                document.createElement("div");
+
+                key.className = "key";
+
+                key.innerHTML = "🔑";
+
+                key.style.left =
+                x*size+"px";
+
+                key.style.top =
+                y*size+"px";
+
+                key.id = "key";
+
+                game.appendChild(key);
+
+            }
+
+            /* COIN */
+
+            if(cell === "C"){
+
+                const coin =
+                document.createElement("div");
+
+                coin.className = "coin";
+
+                coin.innerHTML = "💰";
+
+                coin.style.left =
+                x*size+"px";
+
+                coin.style.top =
+                y*size+"px";
+
+                game.appendChild(coin);
+
+                coins.push({
+                    x,y,el:coin
+                });
+
+            }
+
+        });
+
+    });
+
+    createEnemy(7,7);
+    createEnemy(13,2);
+
+    updatePlayer();
+
+}
+
+/* ENEMIES */
+
+function createEnemy(x,y){
+
+    const enemy =
+    document.createElement("div");
+
+    enemy.className = "enemy";
+
+    enemy.innerHTML = "👾";
+
+    enemy.style.left =
+    x*size+"px";
+
+    enemy.style.top =
+    y*size+"px";
+
+    game.appendChild(enemy);
+
+    enemies.push({
+        x,y,el:enemy
+    });
+
+}
+
+/* UPDATE PLAYER */
+
+function updatePlayer(){
+
+    player.style.left =
+    playerX*size+"px";
+
+    player.style.top =
+    playerY*size+"px";
+
+    drawFog();
+
+}
+
+/* MOVE */
+
+function move(dx,dy){
+
+    let nx = playerX + dx;
+    let ny = playerY + dy;
+
+    const hit =
+    walls.some(w=>
+        w.x===nx && w.y===ny
+    );
+
+    if(hit){
+
+        shake();
+
+        return;
+    }
+
+    playerX = nx;
+    playerY = ny;
+
+    updatePlayer();
+
+    checkCoin();
+    checkKey();
+    checkExit();
+    checkEnemy();
+
+}
+
+/* COIN */
+
+function checkCoin(){
+
+    coins.forEach((coin,index)=>{
+
+        if(
+            coin.x===playerX &&
+            coin.y===playerY
+        ){
+
+            coin.el.remove();
+
+            coins.splice(index,1);
+
+            score += 10;
+
+            scoreEl.innerHTML =
+            score;
+
+            speak("Coin!");
+
+        }
+
+    });
+
+}
+
+/* KEY */
+
+function checkKey(){
+
+    const key =
+    document.getElementById("key");
+
+    if(
+        key &&
+        Math.abs(
+            player.offsetLeft -
+            key.offsetLeft
+        ) < 10 &&
+
+        Math.abs(
+            player.offsetTop -
+            key.offsetTop
+        ) < 10
+    ){
+
+        key.remove();
+
+        hasKey = true;
+
+        message.innerHTML =
+        "🚪 Escape now!";
+
+        speak(
+            "You found the key"
+        );
+
+    }
+
+}
+
+/* EXIT */
+
+function checkExit(){
+
+    const exit =
+    document.getElementById("exit");
+
+    if(
+        Math.abs(
+            player.offsetLeft -
+            exit.offsetLeft
+        ) < 10 &&
+
+        Math.abs(
+            player.offsetTop -
+            exit.offsetTop
+        ) < 10
+    ){
+
+        if(hasKey){
+
+            score += 100;
+
+            scoreEl.innerHTML =
+            score;
+
+            currentLevel++;
+
+            if(
+                currentLevel >=
+                levels.length
+            ){
+
+                message.innerHTML =
+                "🏆 YOU WON!";
+
+                speak(
+                    "You completed all levels!"
+                );
+
+                return;
+
+            }
+
+            levelEl.innerHTML =
+            currentLevel + 1;
+
+            message.innerHTML =
+            "🎉 NEXT LEVEL!";
+
+            speak(
+                "Next level"
+            );
+
+            setTimeout(()=>{
+
+                loadLevel(currentLevel);
+
+            },1200);
+
+        }else{
+
+            message.innerHTML =
+            "🔑 Need the key first!";
+
+        }
+
+    }
+
+}
+
+/* ENEMY COLLISION */
+
+function checkEnemy(){
+
+    enemies.forEach(enemy=>{
+
+        if(
+            enemy.x===playerX &&
+            enemy.y===playerY
+        ){
+
+            lives--;
+
+            livesEl.innerHTML =
+            lives;
+
+            shake();
+
+            speak("Ouch!");
+
+            if(lives<=0){
+
+                alert("GAME OVER");
+
+                location.reload();
+
+            }
+
+        }
+
+    });
+
+}
+
+/* ENEMY MOVEMENT */
+
+setInterval(()=>{
+
+    enemies.forEach(enemy=>{
+
+        let dirs = [
+            [1,0],
+            [-1,0],
+            [0,1],
+            [0,-1]
+        ];
+
+        let d =
+        dirs[
+            Math.floor(
+                Math.random()*4
+            )
+        ];
+
+        let nx =
+        enemy.x + d[0];
+
+        let ny =
+        enemy.y + d[1];
+
+        const hit =
+        walls.some(w=>
+            w.x===nx && w.y===ny
+        );
+
+        if(!hit){
+
+            enemy.x = nx;
+            enemy.y = ny;
+
+            enemy.el.style.left =
+            nx*size+"px";
+
+            enemy.el.style.top =
+            ny*size+"px";
+
+        }
+
+    });
+
+    checkEnemy();
+
+},600);
+
+/* SHAKE */
+
+function shake(){
+
+    game.style.transform =
+    "translateX(10px)";
+
+    setTimeout(()=>{
+        game.style.transform =
+        "translateX(-10px)";
+    },50);
+
+    setTimeout(()=>{
+        game.style.transform =
+        "translateX(0)";
+    },100);
+
+}
+
+/* FOG */
+
+function drawFog(){
+
+    ctx.clearRect(
+        0,0,
+        fog.width,
+        fog.height
+    );
+
+    ctx.fillStyle =
+    "rgba(0,0,0,.88)";
+
+    ctx.fillRect(
+        0,0,
+        fog.width,
+        fog.height
+    );
+
+    ctx.globalCompositeOperation =
+    "destination-out";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        playerX*size+20,
+        playerY*size+20,
+        120,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+    ctx.globalCompositeOperation =
+    "source-over";
+
+}
+
+/* KEYBOARD */
+
+document.addEventListener("keydown",(e)=>{
+
+    if(e.key==="ArrowUp")
+        move(0,-1);
+
+    if(e.key==="ArrowDown")
+        move(0,1);
+
+    if(e.key==="ArrowLeft")
+        move(-1,0);
+
+    if(e.key==="ArrowRight")
+        move(1,0);
+
+});
+
+/* TOUCH */
+
+let sx = 0;
+let sy = 0;
+
+game.addEventListener("touchstart",(e)=>{
+
+    sx =
+    e.touches[0].clientX;
+
+    sy =
+    e.touches[0].clientY;
+
+});
+
+game.addEventListener("touchmove",(e)=>{
+
+    let dx =
+    e.touches[0].clientX - sx;
+
+    let dy =
+    e.touches[0].clientY - sy;
+
+    if(Math.abs(dx) > Math.abs(dy)){
+
+        if(dx > 30){
+            move(1,0);
+            sx =
+            e.touches[0].clientX;
+        }
+
+        if(dx < -30){
+            move(-1,0);
+            sx =
+            e.touches[0].clientX;
+        }
+
+    }else{
+
+        if(dy > 30){
+            move(0,1);
+            sy =
+            e.touches[0].clientY;
+        }
+
+        if(dy < -30){
+            move(0,-1);
+            sy =
+            e.touches[0].clientY;
+        }
+
+    }
+
+});
+
+/* VOICE */
+
+function speak(text){
+
+    const speech =
+    new SpeechSynthesisUtterance(text);
+
+    speech.lang = "en-US";
+
+    speech.rate = 1;
+
+    speechSynthesis.cancel();
+
+    speechSynthesis.speak(speech);
+
+}
+
+/* START */
+
+loadLevel(currentLevel);
+
+</script>
+
+</body>
+</html>

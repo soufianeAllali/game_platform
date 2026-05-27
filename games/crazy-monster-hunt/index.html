@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Crazy Monster Hunt Deluxe</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell" id="shell">
+    <canvas id="game"></canvas>
+
+    <header class="hud">
+      <a class="home" href="../../index.html" aria-label="Home">‹</a>
+      <div class="chip"><span>HP</span><strong id="hpText">100</strong></div>
+      <div class="chip"><span>XP</span><strong id="xpText">0</strong></div>
+      <div class="chip"><span>Coins</span><strong id="coinsText">0</strong></div>
+      <div class="chip"><span>Mission</span><strong id="missionText">Hunt</strong></div>
+      <div class="chip"><span>Time</span><strong id="timeText">0</strong></div>
+    </header>
+
+    <aside class="minimap"><canvas id="map"></canvas></aside>
+
+    <section class="weapon-bar" id="weaponBar"></section>
+
+    <nav class="touch">
+      <div class="stick" id="stick"><i id="knob"></i></div>
+      <button id="fireBtn">⚡</button>
+      <button id="skillBtn">✨</button>
+      <button id="dashBtn">💨</button>
+    </nav>
+
+    <section class="screen loading active" id="loadingScreen">
+      <div class="portal"></div>
+      <h1>Crazy Monster Hunt Deluxe</h1>
+      <p>Opening monster worlds...</p>
+    </section>
+
+    <section class="screen menu" id="menuScreen">
+      <div class="hero-copy">
+        <span class="badge">Action adventure for kids</span>
+        <h1>Crazy Monster Hunt Deluxe</h1>
+        <p>Explore strange worlds, chase monsters, collect gems, and defeat giant bosses.</p>
+      </div>
+      <div class="menu-grid">
+        <button class="primary" id="careerBtn">Adventure</button>
+        <button id="survivalBtn">Survival</button>
+        <button id="endlessBtn">Endless</button>
+        <button id="heroesBtn">Heroes</button>
+        <button id="shopBtn">Unlocks</button>
+        <button id="dailyBtn">Daily Reward</button>
+      </div>
+      <div class="progress-card">
+        <strong id="saveSummary">Level 1 · 0 stars</strong>
+        <span id="achievementSummary">No achievements yet</span>
+      </div>
+    </section>
+
+    <section class="screen heroes" id="heroesScreen">
+      <div class="screen-head"><h2>Heroes & Pets</h2><button data-close>×</button></div>
+      <div class="cards" id="heroGrid"></div>
+      <div class="cards small" id="petGrid"></div>
+    </section>
+
+    <section class="screen shop" id="shopScreen">
+      <div class="screen-head"><h2>Monster Gear</h2><button data-close>×</button></div>
+      <div class="cards" id="shopGrid"></div>
+    </section>
+
+    <section class="screen pause" id="pauseScreen">
+      <h2>Paused</h2>
+      <button class="primary" id="resumeBtn">Resume</button>
+      <button id="quitBtn">Quit Mission</button>
+    </section>
+
+    <section class="screen result" id="resultScreen">
+      <div class="result-icon" id="resultIcon">🏆</div>
+      <h2 id="resultTitle">Mission Complete</h2>
+      <div class="stars" id="stars"></div>
+      <p id="resultText">Rewards earned.</p>
+      <button class="primary" id="nextBtn">Next Mission</button>
+      <button id="menuBtn">Main Menu</button>
+    </section>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

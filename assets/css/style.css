@@ -439,6 +439,15 @@ h1 {
 .game-art.toy { background: linear-gradient(135deg, #ff8ed0, #75f0b4); }
 .game-art.word { background: linear-gradient(135deg, #45b7ff, #ffe066); }
 .game-art.hidden { background: linear-gradient(135deg, #8458ff, #ff8ed0); }
+.game-art.maze { background: linear-gradient(135deg, #16213f, #45b7ff); }
+.game-art.banana { background: linear-gradient(135deg, #ffe066, #ff9d42); }
+.game-art.creator { background: linear-gradient(135deg, #8458ff, #75f0b4); }
+.game-art.dentist { background: linear-gradient(135deg, #74e4ff, #ff8ed0); }
+.game-art.orchestra { background: linear-gradient(135deg, #ff5ea8, #ffd166 48%, #45b7ff); }
+.game-art.laundry { background: linear-gradient(135deg, #243bff, #37d8ff 55%, #fff06b); }
+.game-art.boba { background: linear-gradient(135deg, #ff8ed0, #6df0d5); }
+.game-art.fireworks { background: linear-gradient(135deg, #16164f, #8458ff, #ff5ea8); }
+.game-art.airport { background: linear-gradient(135deg, #8ee7ff, #5ad67d, #ffd166); }
 
 .game-content {
   padding: 22px;

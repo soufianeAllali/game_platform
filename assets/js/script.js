@@ -10,16 +10,10 @@ function filterGames() {
   const query = searchInput.value.trim().toLowerCase();
   let visibleCount = 0;
 
-  if (query === "") {
-    cards.forEach((card) => card.classList.remove("hidden-card"));
-    emptyState.hidden = true;
-    return;
-  }
-
   cards.forEach((card) => {
     const title = card.dataset.title.toLowerCase();
     const categories = card.dataset.category;
-    const matchesSearch = title.includes(query);
+    const matchesSearch = query === "" || title.includes(query);
     const matchesFilter = activeFilter === "all" || categories.includes(activeFilter);
     const isVisible = matchesSearch && matchesFilter;
 
@@ -27,7 +21,7 @@ function filterGames() {
     if (isVisible) visibleCount += 1;
   });
 
-  emptyState.hidden = query === "" || visibleCount !== 0;
+  emptyState.hidden = visibleCount !== 0;
 }
 
 searchInput.addEventListener("input", filterGames);
