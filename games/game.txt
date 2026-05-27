@@ -95,3 +95,9 @@
 أو مفاتيح متعددة + بابين + Boss level
 
 اضف هذه
+
+
+git pull origin main --allow-unrelated-histories
+git add .
+git commit -m "merge updates"
+git push origin main

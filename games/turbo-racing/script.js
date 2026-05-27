@@ -72,6 +72,29 @@ let roadSeed = 0;
 let shake = 0;
 let camera = 0;
 let dpr = 1;
+let viewW = innerWidth;
+let viewH = innerHeight;
+let hudClock = 0;
+let hudDirty = true;
+let skyGradientKey = "";
+let skyGradient = null;
+let cachedRoadWidth = 0;
+let cachedRoadLimit = 0;
+
+const perf = {
+  mode: "full",
+  effects: 1,
+  weather: 90,
+  particles: 190,
+  dprLimit: 2,
+  shadows: true,
+  fps: 60,
+  fpsFrames: 0,
+  fpsClock: 0,
+  lowFrames: 0,
+  debug: new URLSearchParams(location.search).has("debug") || localStorage.getItem("turboRacingDebug") === "1",
+  monitor: null
+};
 
 const state = {
   level: 1,
@@ -130,16 +153,49 @@ function save() {
   localStorage.setItem(saveKey, JSON.stringify(state));
 }
 
+function detectPerformanceMode() {
+  const memory = navigator.deviceMemory || 4;
+  const cores = navigator.hardwareConcurrency || 4;
+  const coarse = matchMedia("(pointer: coarse)").matches;
+  const smallScreen = Math.min(innerWidth, innerHeight) < 520;
+  const weak = memory <= 3 || cores <= 4 || (coarse && smallScreen);
+  applyPerformanceMode(weak ? "lite" : "full");
+}
+
+function applyPerformanceMode(modeName) {
+  perf.mode = modeName;
+  document.documentElement.dataset.perf = modeName;
+  const lite = modeName === "lite";
+  perf.effects = lite ? .58 : 1;
+  perf.weather = lite ? 42 : 90;
+  perf.particles = lite ? 95 : 190;
+  perf.dprLimit = lite ? 1.35 : 2;
+  perf.shadows = !lite;
+}
+
+function initDebugMonitor() {
+  if (!perf.debug) return;
+  perf.monitor = document.createElement("div");
+  perf.monitor.className = "fps-monitor";
+  perf.monitor.textContent = "FPS --";
+  document.body.appendChild(perf.monitor);
+}
+
 function show(screen) {
   [ui.loading, ui.menu, ui.garage, ui.shop, ui.pause, ui.result].forEach((el) => el.classList.remove("active"));
   if (screen) screen.classList.add("active");
 }
 
 function resize() {
-  dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
+  viewW = innerWidth;
+  viewH = innerHeight;
+  dpr = Math.min(perf.dprLimit, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(viewW * dpr);
+  canvas.height = Math.floor(viewH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cachedRoadWidth = roadWidth();
+  cachedRoadLimit = cachedRoadWidth / 2 - 34;
+  skyGradientKey = "";
 }
 
 function ensureAudio() {
@@ -148,17 +204,22 @@ function ensureAudio() {
 }
 
 function beep(freq, duration = .1, type = "triangle", gain = .045) {
+  beepAt(freq, duration, type, gain, 0);
+}
+
+function beepAt(freq, duration = .1, type = "triangle", gain = .045, offset = 0) {
   if (!audio) return;
   const osc = audio.createOscillator();
   const vol = audio.createGain();
+  const start = audio.currentTime + offset;
   osc.type = type;
   osc.frequency.value = freq;
   vol.gain.value = gain;
   osc.connect(vol);
   vol.connect(audio.destination);
-  osc.start();
-  vol.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
-  osc.stop(audio.currentTime + duration);
+  osc.start(start);
+  vol.gain.exponentialRampToValueAtTime(.001, start + duration);
+  osc.stop(start + duration);
 }
 
 function sound(name) {
@@ -171,7 +232,7 @@ function sound(name) {
     buy: [500, 740, 980],
     power: [420, 620, 920]
   };
-  (patterns[name] || [440]).forEach((freq, i) => setTimeout(() => beep(freq, .12, name === "crash" ? "sawtooth" : "triangle"), i * 65));
+  (patterns[name] || [440]).forEach((freq, i) => beepAt(freq, .12, name === "crash" ? "sawtooth" : "triangle", .045, i * .065));
 }
 
 function currentCar() { return cars.find((car) => car.id === state.selectedCar) || cars[0]; }
@@ -297,8 +358,8 @@ function startRace(nextMode = "career") {
   race.spawnTimer = 0;
   race.coinTimer = 0;
   race.powerTimer = 0;
-  race.player.x = innerWidth / 2;
-  race.player.y = innerHeight - Math.min(150, innerHeight * .18);
+  race.player.x = viewW / 2;
+  race.player.y = viewH - Math.min(150, viewH * .18);
   race.player.vx = 0;
   race.player.speed = 130 + state.level * 8;
   race.player.nitro = Math.min(100, 55 + (state.inventory.turbo > 0 ? 35 : 0));
@@ -312,7 +373,7 @@ function startRace(nextMode = "career") {
   race.powerups = [];
   race.particles = [];
   race.roadMarks = Array.from({ length: 18 }, (_, i) => ({ y: i * 120, wobble: Math.random() * 50 }));
-  race.weather = Array.from({ length: 90 }, () => ({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, s: 2 + Math.random() * 6 }));
+  race.weather = Array.from({ length: perf.weather }, () => ({ x: Math.random() * viewW, y: Math.random() * viewH, s: 2 + Math.random() * 6 }));
   if (state.inventory.turbo > 0) state.inventory.turbo -= 1;
   if (state.inventory.shield > 0) state.inventory.shield -= 1;
   if (state.inventory.magnet > 0) state.inventory.magnet -= 1;
@@ -332,7 +393,7 @@ function createBots() {
   const count = race.boss ? 5 : race.police ? 6 : 3 + Math.min(4, Math.floor(state.level / 2));
   for (let i = 0; i < count; i++) {
     race.bots.push({
-      x: innerWidth / 2 + (Math.random() - .5) * roadWidth() * .55,
+      x: viewW / 2 + (Math.random() - .5) * cachedRoadWidth * .55,
       y: -120 - i * 180,
       lane: Math.random(),
       speed: 110 + state.level * 10 + Math.random() * 80,
@@ -344,12 +405,12 @@ function createBots() {
 }
 
 function roadWidth() {
-  return Math.min(620, Math.max(310, innerWidth * .62));
+  return Math.min(620, Math.max(310, viewW * .62));
 }
 
 function roadCenter(y = 0) {
-  const curve = Math.sin((race.distance + y) * .0013) * Math.min(90, innerWidth * .08);
-  return innerWidth / 2 + curve;
+  const curve = Math.sin((race.distance + y) * .0013) * Math.min(90, viewW * .08);
+  return viewW / 2 + curve;
 }
 
 function update(dt) {
@@ -378,7 +439,7 @@ function update(dt) {
   race.player.drift = Math.min(1, Math.abs(race.player.vx) / 420);
   if (race.player.drift > .45) spawnTrail(race.player.x - Math.sign(race.player.vx) * 16, race.player.y + 42, "#c9d3df", 2);
 
-  const half = roadWidth() / 2 - 34;
+  const half = cachedRoadLimit;
   const center = roadCenter(race.player.y);
   if (race.player.x < center - half || race.player.x > center + half) {
     race.player.speed *= .985;
@@ -392,6 +453,7 @@ function update(dt) {
   roadSeed += race.player.speed * dt;
   camera += (race.player.vx * .018 - camera) * dt * 3;
   if (shake > 0) shake -= dt;
+  if (coinSoundClock > 0) coinSoundClock -= dt;
   if (race.player.shield > 0) race.player.shield = Math.max(0, race.player.shield - dt * 4);
   if (race.player.magnet > 0) race.player.magnet = Math.max(0, race.player.magnet - dt);
   if (race.player.slowmo > 0) race.player.slowmo = Math.max(0, race.player.slowmo - dt);
@@ -402,10 +464,16 @@ function update(dt) {
   updateParticles(dt);
   updateWeather(dt);
   updateLaps();
-  updateHud();
+  hudClock += dt;
+  if (hudDirty || hudClock >= .1) {
+    hudClock = 0;
+    hudDirty = false;
+    updateHud();
+  }
 }
 
 let boostSoundClock = 0;
+let coinSoundClock = 0;
 function soundThrottle(name) {
   boostSoundClock -= 1 / 60;
   if (name === "boost" && boostSoundClock <= 0) {
@@ -422,7 +490,7 @@ function spawnWorld(dt) {
     race.spawnTimer = Math.max(.45, 1.25 - state.level * .035);
     const center = roadCenter(-200);
     race.obstacles.push({
-      x: center + (Math.random() - .5) * roadWidth() * .75,
+      x: center + (Math.random() - .5) * cachedRoadWidth * .75,
       y: -120,
       w: 42 + Math.random() * 22,
       h: 54 + Math.random() * 34,
@@ -439,7 +507,7 @@ function spawnWorld(dt) {
   if (race.powerTimer <= 0) {
     race.powerTimer = 7 + Math.random() * 6;
     const ids = ["shield", "turbo", "magnet", "slowmo"];
-    race.powerups.push({ x: roadCenter(-160) + (Math.random() - .5) * roadWidth() * .6, y: -100, id: ids[Math.floor(Math.random() * ids.length)] });
+    race.powerups.push({ x: roadCenter(-160) + (Math.random() - .5) * cachedRoadWidth * .6, y: -100, id: ids[Math.floor(Math.random() * ids.length)] });
   }
 }
 
@@ -447,13 +515,13 @@ function updateBots(dt, slow) {
   race.bots.forEach((bot) => {
     const ai = 1 + state.level * .025 + (bot.boss ? .45 : 0);
     bot.y += (race.player.speed - bot.speed * ai) * dt * slow;
-    const target = roadCenter(bot.y) + Math.sin(race.time * (1.2 + bot.lane) + bot.lane * 7) * roadWidth() * .34;
+    const target = roadCenter(bot.y) + Math.sin(race.time * (1.2 + bot.lane) + bot.lane * 7) * cachedRoadWidth * .34;
     bot.x += (target - bot.x) * dt * (bot.police ? 1.8 : 1.1);
-    if (bot.y > innerHeight + 160) {
+    if (bot.y > viewH + 160) {
       bot.y = -260 - Math.random() * 500;
       bot.speed += 8;
     }
-    if (bot.y < -900) bot.y = innerHeight + Math.random() * 300;
+    if (bot.y < -900) bot.y = viewH + Math.random() * 300;
     if (hitCar(bot.x, bot.y, 44, 78)) crash(bot.police ? "Police bump!" : "Rival collision!");
   });
 }
@@ -486,7 +554,10 @@ function updatePickups(dt) {
       state.coins += 1;
       race.score += 10;
       spawnBurst(coin.x, coin.y, "#ffd34f", 10);
-      sound("coin");
+      if (coinSoundClock <= 0) {
+        coinSoundClock = .08;
+        sound("coin");
+      }
       return true;
     }
     return false;
@@ -505,8 +576,14 @@ function updatePickups(dt) {
 function moveList(list, fall, hit) {
   for (let i = list.length - 1; i >= 0; i--) {
     list[i].y += fall;
-    if (hit(list[i]) || list[i].y > innerHeight + 160) list.splice(i, 1);
+    if (hit(list[i]) || list[i].y > viewH + 160) fastRemove(list, i);
   }
+}
+
+function fastRemove(list, index) {
+  const lastIndex = list.length - 1;
+  list[index] = list[lastIndex];
+  list.pop();
 }
 
 function applyPower(id) {
@@ -548,20 +625,21 @@ function updateParticles(dt) {
     p.y += p.vy * dt;
     p.life -= dt;
     p.vy += 80 * dt;
-    if (p.life <= 0) race.particles.splice(i, 1);
+    if (p.life <= 0) fastRemove(race.particles, i);
   }
 }
 
 function updateWeather(dt) {
-  race.weather.forEach((w) => {
+  for (let i = 0; i < race.weather.length; i++) {
+    const w = race.weather[i];
     w.y += (race.route.weather === "rain" ? 560 : 140) * dt;
     w.x += (race.route.weather === "storm" ? 80 : 12) * dt;
-    if (w.y > innerHeight + 20) {
+    if (w.y > viewH + 20) {
       w.y = -20;
-      w.x = Math.random() * innerWidth;
+      w.x = Math.random() * viewW;
     }
-    if (w.x > innerWidth + 20) w.x = -20;
-  });
+    if (w.x > viewW + 20) w.x = -20;
+  }
 }
 
 function updateLaps() {
@@ -581,8 +659,8 @@ function updateHud() {
   ui.lap.textContent = mode === "endless" ? `${Math.floor(race.distance / 1000)} km` : `${Math.min(race.lap, race.laps)}/${race.laps}`;
   ui.coins.textContent = state.coins;
   ui.time.textContent = race.time.toFixed(1);
-  ui.nitro.style.width = `${race.player.nitro}%`;
-  ui.shield.style.width = `${race.player.shield}%`;
+  ui.nitro.style.transform = `scaleX(${race.player.nitro / 100})`;
+  ui.shield.style.transform = `scaleX(${race.player.shield / 100})`;
 }
 
 function finish(won) {
@@ -624,7 +702,9 @@ function unlockNextCar() {
 }
 
 function spawnTrail(x, y, color, count) {
-  for (let i = 0; i < count; i++) {
+  const total = Math.max(1, Math.round(count * perf.effects));
+  trimParticles(total);
+  for (let i = 0; i < total; i++) {
     race.particles.push({
       x: x + (Math.random() - .5) * 26,
       y: y + Math.random() * 20,
@@ -638,41 +718,51 @@ function spawnTrail(x, y, color, count) {
 }
 
 function spawnBurst(x, y, color, count) {
-  for (let i = 0; i < count; i++) {
+  const total = Math.max(4, Math.round(count * perf.effects));
+  trimParticles(total);
+  for (let i = 0; i < total; i++) {
     const a = Math.random() * Math.PI * 2;
     const s = 80 + Math.random() * 260;
     race.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .45 + Math.random() * .35, size: 3 + Math.random() * 8, color });
   }
 }
 
+function trimParticles(incoming = 0) {
+  const overflow = race.particles.length + incoming - perf.particles;
+  if (overflow > 0) race.particles.splice(0, overflow);
+}
+
 function feed(text) {
-  ui.feed.innerHTML = `<strong>${text}</strong><span>${race.route ? race.route.name : "Turbo Racing Nitro"}</span>`;
+  ui.feed.firstElementChild.textContent = text;
+  ui.feed.lastElementChild.textContent = race.route ? race.route.name : "Turbo Racing Nitro";
 }
 
 function draw() {
-  const w = innerWidth;
-  const h = innerHeight;
   const sx = shake > 0 ? (Math.random() - .5) * 18 : 0;
   const sy = shake > 0 ? (Math.random() - .5) * 12 : 0;
   ctx.save();
-  ctx.clearRect(0, 0, w, h);
+  ctx.clearRect(0, 0, viewW, viewH);
   ctx.translate(sx - camera, sy);
-  drawSky(w, h);
-  drawRoad(w, h);
+  drawSky(viewW, viewH);
+  drawRoad(viewW, viewH);
   drawPickups();
   drawBots();
   drawPlayer();
   drawParticles();
-  drawWeather(w, h);
+  drawWeather(viewW, viewH);
   ctx.restore();
   if (paused) drawDim();
 }
 
 function drawSky(w, h) {
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, race.route.sky[0]);
-  g.addColorStop(1, race.route.sky[1]);
-  ctx.fillStyle = g;
+  const key = `${race.route.id}:${w}:${h}`;
+  if (skyGradientKey !== key) {
+    skyGradient = ctx.createLinearGradient(0, 0, 0, h);
+    skyGradient.addColorStop(0, race.route.sky[0]);
+    skyGradient.addColorStop(1, race.route.sky[1]);
+    skyGradientKey = key;
+  }
+  ctx.fillStyle = skyGradient;
   ctx.fillRect(-80, 0, w + 160, h);
   for (let i = 0; i < 16; i++) {
     const x = (i * 170 - roadSeed * .08) % (w + 240) - 120;
@@ -683,25 +773,29 @@ function drawSky(w, h) {
 }
 
 function drawRoad(w, h) {
-  const rw = roadWidth();
+  const rw = cachedRoadWidth;
   ctx.lineJoin = "round";
-  const pointsL = [];
-  const pointsR = [];
+  ctx.beginPath();
   for (let y = -60; y <= h + 80; y += 36) {
     const c = roadCenter(y);
     const scale = .72 + (y / h) * .4;
-    pointsL.push([c - rw * scale / 2, y]);
-    pointsR.unshift([c + rw * scale / 2, y]);
+    const x = c - rw * scale / 2;
+    y === -60 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
-  ctx.beginPath();
-  [...pointsL, ...pointsR].forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+  for (let y = h + 84; y >= -60; y -= 36) {
+    const c = roadCenter(y);
+    const scale = .72 + (y / h) * .4;
+    ctx.lineTo(c + rw * scale / 2, y);
+  }
   ctx.closePath();
   ctx.fillStyle = race.route.road;
   ctx.fill();
   ctx.strokeStyle = race.route.neon;
   ctx.lineWidth = 5;
-  ctx.shadowColor = race.route.neon;
-  ctx.shadowBlur = 18;
+  if (perf.shadows) {
+    ctx.shadowColor = race.route.neon;
+    ctx.shadowBlur = 18;
+  }
   ctx.stroke();
   ctx.shadowBlur = 0;
 
@@ -734,8 +828,10 @@ function drawPickups() {
     ctx.save();
     ctx.translate(o.x, o.y);
     ctx.fillStyle = o.type === "jump" ? "#ffd34f" : "#ff4d61";
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 18;
+    if (perf.shadows) {
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 18;
+    }
     roundRect(-o.w / 2, -o.h / 2, o.w, o.h, 10, true);
     ctx.fillStyle = "#fff";
     ctx.font = "22px Arial";
@@ -748,8 +844,10 @@ function drawPickups() {
     ctx.translate(coin.x, coin.y);
     ctx.rotate(coin.spin);
     ctx.fillStyle = "#ffd34f";
-    ctx.shadowColor = "#ffd34f";
-    ctx.shadowBlur = 18;
+    if (perf.shadows) {
+      ctx.shadowColor = "#ffd34f";
+      ctx.shadowBlur = 18;
+    }
     ctx.beginPath();
     ctx.ellipse(0, 0, 13, 18, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -764,8 +862,10 @@ function drawPickups() {
     ctx.translate(p.x, p.y);
     ctx.rotate(race.time * 2);
     ctx.fillStyle = "#28d7ff";
-    ctx.shadowColor = "#28d7ff";
-    ctx.shadowBlur = 20;
+    if (perf.shadows) {
+      ctx.shadowColor = "#28d7ff";
+      ctx.shadowBlur = 20;
+    }
     roundRect(-18, -18, 36, 36, 10, true);
     ctx.restore();
     ctx.fillStyle = "#fff";
@@ -785,8 +885,10 @@ function drawPlayer() {
   if (race.player.shield > 0) {
     ctx.strokeStyle = "rgba(125,247,255,.72)";
     ctx.lineWidth = 3;
-    ctx.shadowColor = "#7df7ff";
-    ctx.shadowBlur = 18;
+    if (perf.shadows) {
+      ctx.shadowColor = "#7df7ff";
+      ctx.shadowBlur = 18;
+    }
     ctx.beginPath();
     ctx.ellipse(race.player.x, race.player.y, 45, 68, 0, 0, Math.PI * 2);
     ctx.stroke();
@@ -799,8 +901,10 @@ function drawCar(x, y, color, glow, scale = 1, police = false, tilt = 0) {
   ctx.translate(x, y);
   ctx.rotate(tilt);
   ctx.scale(scale, scale);
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 20;
+  if (perf.shadows) {
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 20;
+  }
   ctx.fillStyle = color;
   roundRect(-23, -42, 46, 84, 13, true);
   ctx.shadowBlur = 0;
@@ -820,17 +924,20 @@ function drawCar(x, y, color, glow, scale = 1, police = false, tilt = 0) {
 }
 
 function drawParticles() {
-  race.particles.forEach((p) => {
+  for (let i = 0; i < race.particles.length; i++) {
+    const p = race.particles[i];
     ctx.globalAlpha = Math.max(0, p.life * 2);
     ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 16;
+    if (perf.shadows) {
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 16;
+    }
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
-  });
+  }
 }
 
 function drawWeather(w, h) {
@@ -842,20 +949,21 @@ function drawWeather(w, h) {
     ctx.fillStyle = "rgba(3,4,12,.22)";
     ctx.fillRect(-80, 0, w + 160, h);
   }
+  if (race.route.weather === "day") return;
   ctx.strokeStyle = race.route.weather === "rain" ? "rgba(190,240,255,.52)" : "rgba(255,255,255,.22)";
   ctx.lineWidth = race.route.weather === "rain" ? 2 : 3;
-  race.weather.forEach((drop) => {
-    if (race.route.weather === "day") return;
+  for (let i = 0; i < race.weather.length; i++) {
+    const drop = race.weather[i];
     ctx.beginPath();
     ctx.moveTo(drop.x, drop.y);
     ctx.lineTo(drop.x - 10, drop.y + drop.s * (race.route.weather === "rain" ? 6 : 2));
     ctx.stroke();
-  });
+  }
 }
 
 function drawDim() {
   ctx.fillStyle = "rgba(0,0,0,.35)";
-  ctx.fillRect(0, 0, innerWidth, innerHeight);
+  ctx.fillRect(0, 0, viewW, viewH);
 }
 
 function roundRect(x, y, w, h, r, fill) {
@@ -873,7 +981,30 @@ function loop(now) {
   last = now;
   update(dt);
   draw();
+  updateFps(dt);
   requestAnimationFrame(loop);
+}
+
+function updateFps(dt) {
+  perf.fpsFrames++;
+  perf.fpsClock += dt;
+  if (perf.fpsClock < .5) return;
+  perf.fps = Math.round(perf.fpsFrames / perf.fpsClock);
+  perf.fpsFrames = 0;
+  perf.fpsClock = 0;
+  if (perf.monitor) {
+    perf.monitor.textContent = `FPS ${perf.fps} | ${perf.mode} | P ${race.particles.length}`;
+  }
+  if (running && perf.mode === "full") {
+    perf.lowFrames = perf.fps < 48 ? perf.lowFrames + 1 : Math.max(0, perf.lowFrames - 1);
+    if (perf.lowFrames >= 5) {
+      applyPerformanceMode("lite");
+      resize();
+      race.weather.length = Math.min(race.weather.length, perf.weather);
+      trimParticles();
+      hudDirty = true;
+    }
+  }
 }
 
 function pauseRace() {
@@ -894,9 +1025,10 @@ function quitRace() {
 }
 
 document.addEventListener("keydown", (event) => {
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) event.preventDefault();
   keys[event.key] = true;
   if (event.key === "Escape") pauseRace();
-});
+}, { passive: false });
 
 document.addEventListener("keyup", (event) => { keys[event.key] = false; });
 
@@ -904,10 +1036,10 @@ function bindHold(id, prop) {
   const btn = document.querySelector(id);
   const on = (event) => { event.preventDefault(); touch[prop] = true; ensureAudio(); };
   const off = () => { touch[prop] = false; };
-  btn.addEventListener("pointerdown", on);
-  btn.addEventListener("pointerup", off);
-  btn.addEventListener("pointercancel", off);
-  btn.addEventListener("pointerleave", off);
+  btn.addEventListener("pointerdown", on, { passive: false });
+  btn.addEventListener("pointerup", off, { passive: true });
+  btn.addEventListener("pointercancel", off, { passive: true });
+  btn.addEventListener("pointerleave", off, { passive: true });
 }
 
 bindHold("#leftBtn", "left");
@@ -916,24 +1048,34 @@ bindHold("#brakeBtn", "brake");
 bindHold("#nitroBtn", "nitro");
 
 canvas.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
   touch.dragging = true;
   touch.startX = event.clientX;
+  canvas.setPointerCapture?.(event.pointerId);
   ensureAudio();
-});
+}, { passive: false });
 
 canvas.addEventListener("pointermove", (event) => {
   if (!touch.dragging) return;
+  event.preventDefault();
   const delta = event.clientX - touch.startX;
+  touch.startX = event.clientX;
   touch.left = delta < -10;
   touch.right = delta > 10;
-  race.player.x += delta * .035;
-});
+  race.player.x += delta * .22;
+}, { passive: false });
 
 canvas.addEventListener("pointerup", () => {
   touch.dragging = false;
   touch.left = false;
   touch.right = false;
-});
+}, { passive: true });
+
+canvas.addEventListener("pointercancel", () => {
+  touch.dragging = false;
+  touch.left = false;
+  touch.right = false;
+}, { passive: true });
 
 document.querySelector("#raceBtn").onclick = () => startRace("career");
 document.querySelector("#endlessBtn").onclick = () => startRace("endless");
@@ -947,9 +1089,19 @@ document.querySelector("#nextRaceBtn").onclick = () => startRace("career");
 document.querySelector("#menuBtn").onclick = () => show(ui.menu);
 document.querySelectorAll("[data-close]").forEach((btn) => btn.onclick = () => { renderMenu(); show(ui.menu); });
 
-window.addEventListener("resize", resize);
+let resizeQueued = false;
+window.addEventListener("resize", () => {
+  if (resizeQueued) return;
+  resizeQueued = true;
+  requestAnimationFrame(() => {
+    resizeQueued = false;
+    resize();
+  });
+}, { passive: true });
 
 loadSave();
+detectPerformanceMode();
+initDebugMonitor();
 resize();
 renderMenu();
 setTimeout(() => {
