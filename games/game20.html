@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Smart Maze Game</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0b0f19;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100dvh;
+            color: #fff;
+            padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .home-btn {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: 12px;
+            z-index: 30;
+            min-height: 42px;
+            padding: 9px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 999px;
+            background: rgba(11, 15, 25, 0.84);
+            color: #fff;
+            font-weight: 800;
+            text-decoration: none;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: clamp(1.45rem, 6vw, 2.2rem);
+            margin-bottom: 10px;
+            color: #10b981;
+            text-align: center;
+            text-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        .btn {
+            background: #1e293b;
+            border: 2px solid #334155;
+            color: white;
+            min-height: 44px;
+            padding: 10px 16px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        .btn:hover {
+            background: #334155;
+            border-color: #475569;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.5);
+        }
+
+        #game-container {
+            position: relative;
+            width: min(500px, calc(100vw - 28px), calc(100dvh - 240px));
+            min-width: 260px;
+            aspect-ratio: 1;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            background-color: #111827;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 15, 25, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            padding: 18px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .overlay h2 {
+            font-size: clamp(1.35rem, 6vw, 2.5rem);
+            color: #f59e0b;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+        }
+
+        .instructions {
+            margin-top: 12px;
+            font-size: clamp(0.78rem, 2.8vw, 0.9rem);
+            color: #b5bfce;
+            text-align: center;
+            max-width: min(520px, 92vw);
+        }
+
+        .touch-controls {
+            display: none;
+            grid-template-columns: repeat(3, 58px);
+            grid-template-rows: repeat(2, 52px);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .touch-controls button {
+            border: 1px solid #334155;
+            border-radius: 14px;
+            background: #1e293b;
+            color: #dffdf3;
+            font-size: 1.3rem;
+            font-weight: 900;
+            touch-action: manipulation;
+        }
+
+        .touch-controls .up { grid-column: 2; }
+        .touch-controls .left { grid-column: 1; grid-row: 2; }
+        .touch-controls .down { grid-column: 2; grid-row: 2; }
+        .touch-controls .right { grid-column: 3; grid-row: 2; }
+
+        @media (max-width: 720px), (pointer: coarse) {
+            body { justify-content: flex-start; }
+            h1 { margin-top: 34px; }
+            .touch-controls { display: grid; }
+        }
+
+        @media (max-height: 650px) {
+            h1 { display: none; }
+            .instructions { display: none; }
+            #game-container { width: min(500px, calc(100vw - 28px), calc(100dvh - 150px)); }
+        }
+    </style>
+</head>
+<body>
+    <a class="home-btn" href="../index.html">Home</a>
+
+    <h1>Smart Algorithm Maze</h1>
+
+    <div class="controls">
+        <button class="btn btn-primary" onclick="generateNewMaze()">New Maze</button>
+        <button class="btn" id="solve-btn" onclick="toggleSolve()">Show Auto Solution</button>
+    </div>
+
+    <div id="game-container">
+        <canvas id="mazeCanvas" width="500" height="500"></canvas>
+        <div id="victory-overlay" class="overlay hidden">
+            <h2>You escaped successfully!</h2>
+            <button class="btn btn-primary" onclick="generateNewMaze()">Play Again</button>
+        </div>
+    </div>
+
+    <div class="touch-controls" aria-label="Touch controls">
+        <button class="up" data-dir="up" aria-label="Up">^</button>
+        <button class="left" data-dir="left" aria-label="Left">&lt;</button>
+        <button class="down" data-dir="down" aria-label="Down">v</button>
+        <button class="right" data-dir="right" aria-label="Right">&gt;</button>
+    </div>
+
+    <p class="instructions">Move the blue player with the arrow keys, touch buttons, or a swipe to reach the green exit.</p>
+
+    <script>
+        const canvas = document.getElementById("mazeCanvas");
+        const ctx = canvas.getContext("2d");
+        const victoryOverlay = document.getElementById("victory-overlay");
+        const solveBtn = document.getElementById("solve-btn");
+
+        const cellSize = 25;
+        const cols = canvas.width / cellSize;
+        const rows = canvas.height / cellSize;
+
+        let grid = [];
+        let currentCell;
+        let stack = [];
+        let player = { x: 0, y: 0 };
+        const goal = { x: cols - 1, y: rows - 1 };
+        let showSolution = false;
+        let solutionPath = [];
+        let touchStart = null;
+
+        class Cell {
+            constructor(r, c) {
+                this.r = r;
+                this.c = c;
+                this.walls = [true, true, true, true];
+                this.visited = false;
+            }
+
+            show() {
+                let x = this.c * cellSize;
+                let y = this.r * cellSize;
+                ctx.strokeStyle = "#374151";
+                ctx.lineWidth = 2;
+
+                if (this.walls[0]) ctx.strokeRect(x, y, cellSize, 0);
+                if (this.walls[1]) ctx.strokeRect(x + cellSize, y, 0, cellSize);
+                if (this.walls[2]) ctx.strokeRect(x, y + cellSize, cellSize, 0);
+                if (this.walls[3]) ctx.strokeRect(x, y, 0, cellSize);
+            }
+
+            checkNeighbors() {
+                let neighbors = [];
+                let top = grid[index(this.r - 1, this.c)];
+                let right = grid[index(this.r, this.c + 1)];
+                let bottom = grid[index(this.r + 1, this.c)];
+                let left = grid[index(this.r, this.c - 1)];
+
+                if (top && !top.visited) neighbors.push(top);
+                if (right && !right.visited) neighbors.push(right);
+                if (bottom && !bottom.visited) neighbors.push(bottom);
+                if (left && !left.visited) neighbors.push(left);
+
+                if (neighbors.length > 0) {
+                    let r = Math.floor(Math.random() * neighbors.length);
+                    return neighbors[r];
+                }
+                return undefined;
+            }
+        }
+
+        function index(r, c) {
+            if (c < 0 || r < 0 || c > cols - 1 || r > rows - 1) return -1;
+            return c + r * cols;
+        }
+
+        function removeWalls(a, b) {
+            let x = a.c - b.c;
+            if (x === 1) {
+                a.walls[3] = false;
+                b.walls[1] = false;
+            } else if (x === -1) {
+                a.walls[1] = false;
+                b.walls[3] = false;
+            }
+            let y = a.r - b.r;
+            if (y === 1) {
+                a.walls[0] = false;
+                b.walls[2] = false;
+            } else if (y === -1) {
+                a.walls[2] = false;
+                b.walls[0] = false;
+            }
+        }
+
+        function generateNewMaze() {
+            victoryOverlay.classList.add("hidden");
+            showSolution = false;
+            solveBtn.textContent = "Show Auto Solution";
+            player = { x: 0, y: 0 };
+            grid = [];
+            stack = [];
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    grid.push(new Cell(r, c));
+                }
+            }
+
+            currentCell = grid[0];
+            currentCell.visited = true;
+
+            let done = false;
+            while (!done) {
+                let next = currentCell.checkNeighbors();
+                if (next) {
+                    next.visited = true;
+                    stack.push(currentCell);
+                    removeWalls(currentCell, next);
+                    currentCell = next;
+                } else if (stack.length > 0) {
+                    currentCell = stack.pop();
+                } else {
+                    done = true;
+                }
+            }
+
+            calculateSolution();
+            draw();
+        }
+
+        function calculateSolution() {
+            let queue = [[ { r: 0, c: 0 } ]];
+            let visited = new Set(["0,0"]);
+
+            while (queue.length > 0) {
+                let path = queue.shift();
+                let current = path[path.length - 1];
+
+                if (current.r === goal.y && current.c === goal.x) {
+                    solutionPath = path;
+                    return;
+                }
+
+                let cell = grid[index(current.r, current.c)];
+                let directions = [
+                    { r: current.r - 1, c: current.c, wallIdx: 0 },
+                    { r: current.r, c: current.c + 1, wallIdx: 1 },
+                    { r: current.r + 1, c: current.c, wallIdx: 2 },
+                    { r: current.r, c: current.c - 1, wallIdx: 3 }
+                ];
+
+                for (let dir of directions) {
+                    let nextIdx = index(dir.r, dir.c);
+                    if (nextIdx !== -1 && !cell.walls[dir.wallIdx]) {
+                        let key = `${dir.r},${dir.c}`;
+                        if (!visited.has(key)) {
+                            visited.add(key);
+                            queue.push([...path, { r: dir.r, c: dir.c }]);
+                        }
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            grid.forEach(cell => cell.show());
+
+            if (showSolution) {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "rgba(234, 179, 8, 0.6)";
+                ctx.beginPath();
+                solutionPath.forEach((p, idx) => {
+                    let x = p.c * cellSize + cellSize / 2;
+                    let y = p.r * cellSize + cellSize / 2;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = "#10b981";
+            ctx.fillRect(goal.x * cellSize + 4, goal.y * cellSize + 4, cellSize - 8, cellSize - 8);
+
+            ctx.fillStyle = "#38bdf8";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#38bdf8";
+            ctx.fillRect(player.x * cellSize + 5, player.y * cellSize + 5, cellSize - 10, cellSize - 10);
+            ctx.shadowBlur = 0;
+        }
+
+        function toggleSolve() {
+            showSolution = !showSolution;
+            solveBtn.textContent = showSolution ? "Hide Auto Solution" : "Show Auto Solution";
+            draw();
+        }
+
+        function movePlayer(direction) {
+            if (!victoryOverlay.classList.contains("hidden")) return;
+
+            let currentCell = grid[index(player.y, player.x)];
+            let moved = false;
+
+            if (direction === "up" && !currentCell.walls[0]) {
+                player.y--;
+                moved = true;
+            }
+            if (direction === "right" && !currentCell.walls[1]) {
+                player.x++;
+                moved = true;
+            }
+            if (direction === "down" && !currentCell.walls[2]) {
+                player.y++;
+                moved = true;
+            }
+            if (direction === "left" && !currentCell.walls[3]) {
+                player.x--;
+                moved = true;
+            }
+
+            if (moved) {
+                draw();
+                checkVictory();
+            }
+        }
+
+        window.addEventListener("keydown", e => {
+            const directions = {
+                ArrowUp: "up",
+                ArrowRight: "right",
+                ArrowDown: "down",
+                ArrowLeft: "left"
+            };
+            if (directions[e.key]) {
+                e.preventDefault();
+                movePlayer(directions[e.key]);
+            }
+        });
+
+        document.querySelectorAll(".touch-controls button").forEach(button => {
+            button.addEventListener("pointerdown", e => {
+                e.preventDefault();
+                movePlayer(button.dataset.dir);
+            });
+        });
+
+        canvas.addEventListener("pointerdown", e => {
+            touchStart = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener("pointerup", e => {
+            if (!touchStart) return;
+            const deltaX = e.clientX - touchStart.x;
+            const deltaY = e.clientY - touchStart.y;
+            if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 24) {
+                movePlayer(Math.abs(deltaX) > Math.abs(deltaY) ? (deltaX > 0 ? "right" : "left") : (deltaY > 0 ? "down" : "up"));
+            }
+            touchStart = null;
+        });
+
+        function checkVictory() {
+            if (player.x === goal.x && player.y === goal.y) {
+                setTimeout(() => {
+                    victoryOverlay.classList.remove("hidden");
+                }, 200);
+            }
+        }
+
+        generateNewMaze();
+    </script>
+</body>
+</html>
