@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>🔥 ULTRA MAZE QUEST 🔥</title>
 
 <style>
@@ -12,6 +12,13 @@
     padding:0;
     box-sizing:border-box;
     font-family:Comic Sans MS,cursive;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html{
+    width:100%;
+    height:100%;
+    overflow:hidden;
 }
 
 body{
@@ -22,17 +29,32 @@ body{
     flex-direction:column;
     align-items:center;
     justify-content:center;
+    gap:clamp(6px,1.4vmin,12px);
+    width:100%;
     height:100vh;
+    height:100dvh;
+    padding:
+    max(8px,env(safe-area-inset-top))
+    max(8px,env(safe-area-inset-right))
+    max(8px,env(safe-area-inset-bottom))
+    max(8px,env(safe-area-inset-left));
+    touch-action:none;
+    overscroll-behavior:none;
+    user-select:none;
 }
 
 /* TITLE */
 
 .title{
     color:white;
-    font-size:45px;
-    margin-bottom:12px;
+    width:min(100%,720px);
+    font-size:clamp(24px,6.6vmin,45px);
+    line-height:1;
+    margin-bottom:0;
+    text-align:center;
     text-shadow:0 0 20px cyan;
     animation:pulse 2s infinite;
+    overflow-wrap:anywhere;
 }
 
 @keyframes pulse{
@@ -45,17 +67,20 @@ body{
 
 .hud{
     display:flex;
-    gap:12px;
-    margin-bottom:12px;
+    gap:clamp(6px,1.8vmin,12px);
+    margin-bottom:0;
     flex-wrap:wrap;
     justify-content:center;
+    width:min(100%,720px);
 }
 
 .box{
     background:white;
-    padding:10px 18px;
-    border-radius:18px;
-    font-size:20px;
+    padding:clamp(7px,1.8vmin,10px) clamp(10px,3vmin,18px);
+    border-radius:clamp(12px,3vmin,18px);
+    font-size:clamp(14px,3.2vmin,20px);
+    line-height:1.1;
+    white-space:nowrap;
     box-shadow:0 5px 15px rgba(0,0,0,.3);
 }
 
@@ -69,9 +94,12 @@ body{
     max-height:720px;
     background:#0b1220;
     overflow:hidden;
-    border:8px solid white;
-    border-radius:25px;
+    border:clamp(4px,1.4vmin,8px) solid white;
+    border-radius:clamp(16px,4vmin,25px);
     box-shadow:0 0 40px rgba(0,255,255,.3);
+    flex:0 0 auto;
+    touch-action:none;
+    transition:transform .08s linear;
 }
 
 /* CELLS */
@@ -99,13 +127,13 @@ body{
 
 .player{
     position:absolute;
-    width:40px;
-    height:40px;
-    border-radius:12px;
+    width:var(--cell-size,40px);
+    height:var(--cell-size,40px);
+    border-radius:clamp(7px,30%,12px);
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:24px;
+    font-size:calc(var(--cell-size,40px) * .6);
     background:
     linear-gradient(135deg,#ffe259,#ffa751);
     box-shadow:0 0 20px gold;
@@ -117,13 +145,13 @@ body{
 
 .exit{
     position:absolute;
-    width:40px;
-    height:40px;
-    border-radius:12px;
+    width:var(--cell-size,40px);
+    height:var(--cell-size,40px);
+    border-radius:clamp(7px,30%,12px);
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:24px;
+    font-size:calc(var(--cell-size,40px) * .6);
     background:
     linear-gradient(135deg,#ff416c,#ff4b2b);
     box-shadow:0 0 20px red;
@@ -143,13 +171,13 @@ body{
 
 .enemy{
     position:absolute;
-    width:40px;
-    height:40px;
-    border-radius:12px;
+    width:var(--cell-size,40px);
+    height:var(--cell-size,40px);
+    border-radius:clamp(7px,30%,12px);
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:22px;
+    font-size:calc(var(--cell-size,40px) * .55);
     background:
     linear-gradient(135deg,#ff0000,#8b0000);
     box-shadow:0 0 20px red;
@@ -160,12 +188,12 @@ body{
 
 .key{
     position:absolute;
-    width:40px;
-    height:40px;
+    width:var(--cell-size,40px);
+    height:var(--cell-size,40px);
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:24px;
+    font-size:calc(var(--cell-size,40px) * .6);
     animation:keyFloat 1s infinite alternate;
 }
 
@@ -182,12 +210,12 @@ body{
 
 .coin{
     position:absolute;
-    width:35px;
-    height:35px;
+    width:calc(var(--cell-size,40px) * .875);
+    height:calc(var(--cell-size,40px) * .875);
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:22px;
+    font-size:calc(var(--cell-size,40px) * .55);
     animation:coinSpin 1s infinite linear;
 }
 
@@ -204,13 +232,17 @@ body{
 
 .message{
     position:absolute;
-    top:10px;
+    top:clamp(6px,1.6vmin,10px);
+    left:0;
     width:100%;
+    padding:0 clamp(8px,2.5vmin,16px);
     text-align:center;
     color:white;
-    font-size:24px;
+    font-size:clamp(14px,3.4vmin,24px);
+    line-height:1.15;
     z-index:200;
     text-shadow:0 0 10px black;
+    overflow-wrap:anywhere;
 }
 
 /* FOG */
@@ -225,20 +257,28 @@ body{
 /* CONTROLS */
 
 .controls{
-    margin-top:15px;
+    margin-top:0;
     display:grid;
-    grid-template-columns:80px 80px 80px;
-    gap:10px;
+    grid-template-columns:repeat(3,clamp(56px,16vmin,80px));
+    gap:clamp(6px,1.8vmin,10px);
+    flex:0 0 auto;
+    touch-action:none;
 }
 
 .controls button{
-    width:80px;
-    height:80px;
+    width:clamp(56px,16vmin,80px);
+    height:clamp(56px,16vmin,80px);
     border:none;
-    border-radius:20px;
-    font-size:30px;
+    border-radius:clamp(14px,4vmin,20px);
+    font-size:clamp(22px,6vmin,30px);
     cursor:pointer;
     background:white;
+    box-shadow:0 8px 18px rgba(0,0,0,.25);
+    touch-action:none;
+}
+
+.controls button:active{
+    transform:translateY(3px);
 }
 
 .empty{
@@ -248,6 +288,50 @@ body{
 @media(min-width:900px){
     .controls{
         display:none;
+    }
+}
+
+@media(max-width:520px){
+    body{
+        justify-content:flex-start;
+    }
+
+    .hud{
+        gap:6px;
+    }
+}
+
+@media(max-height:560px) and (orientation:landscape){
+    body{
+        gap:4px;
+        padding:
+        max(4px,env(safe-area-inset-top))
+        max(6px,env(safe-area-inset-right))
+        max(4px,env(safe-area-inset-bottom))
+        max(6px,env(safe-area-inset-left));
+    }
+
+    .title{
+        font-size:clamp(18px,5.2vmin,30px);
+    }
+
+    .box{
+        padding:5px 9px;
+        font-size:clamp(12px,3vmin,16px);
+    }
+
+    .controls{
+        position:fixed;
+        right:max(8px,env(safe-area-inset-right));
+        bottom:max(8px,env(safe-area-inset-bottom));
+        grid-template-columns:repeat(3,clamp(44px,11vmin,58px));
+        gap:6px;
+    }
+
+    .controls button{
+        width:clamp(44px,11vmin,58px);
+        height:clamp(44px,11vmin,58px);
+        font-size:clamp(18px,4.5vmin,24px);
     }
 }
 
@@ -474,10 +558,20 @@ document.getElementById("fog");
 const ctx =
 fog.getContext("2d");
 
-fog.width = 720;
-fog.height = 720;
+const controls =
+document.querySelector(".controls");
 
-const size = 40;
+const title =
+document.querySelector(".title");
+
+const hud =
+document.querySelector(".hud");
+
+const baseSize = 40;
+
+let size = baseSize;
+let mazeCols = 18;
+let mazeRows = 10;
 
 let score = 0;
 let lives = 3;
@@ -490,6 +584,157 @@ let enemies = [];
 let coins = [];
 
 let hasKey = false;
+
+function levelMetrics(index){
+
+    const map =
+    levels[
+        Math.min(index,levels.length-1)
+    ];
+
+    return {
+        cols: Math.max(
+            18,
+            ...map.map(row=>row.length)
+        ),
+        rows: map.length
+    };
+
+}
+
+function setCellBox(el,x,y){
+
+    el.dataset.x = x;
+    el.dataset.y = y;
+
+    el.style.left =
+    x*size+"px";
+
+    el.style.top =
+    y*size+"px";
+
+    el.style.width =
+    (
+        el.classList.contains("coin")
+            ? size*.875
+            : size
+    )+"px";
+
+    el.style.height =
+    (
+        el.classList.contains("coin")
+            ? size*.875
+            : size
+    )+"px";
+
+}
+
+function syncMazeSize(){
+
+    const metrics =
+    levelMetrics(currentLevel);
+
+    mazeCols = metrics.cols;
+    mazeRows = metrics.rows;
+
+    const controlsVisible =
+    getComputedStyle(controls).display !== "none";
+
+    const landscapeControls =
+    controlsVisible &&
+    innerWidth > innerHeight &&
+    innerHeight <= 560;
+
+    const titleHeight =
+    title.getBoundingClientRect().height;
+
+    const hudHeight =
+    hud.getBoundingClientRect().height;
+
+    const controlsHeight =
+    controlsVisible && !landscapeControls
+        ? controls.getBoundingClientRect().height
+        : 0;
+
+    const reservedHeight =
+    titleHeight + hudHeight + controlsHeight + 44;
+
+    const reservedWidth =
+    landscapeControls
+        ? controls.getBoundingClientRect().width + 26
+        : 18;
+
+    const style =
+    getComputedStyle(game);
+
+    const border =
+    parseFloat(style.borderLeftWidth) +
+    parseFloat(style.borderRightWidth);
+
+    const verticalBorder =
+    parseFloat(style.borderTopWidth) +
+    parseFloat(style.borderBottomWidth);
+
+    const availableWidth =
+    Math.max(240,innerWidth - reservedWidth - border);
+
+    const availableHeight =
+    Math.max(220,innerHeight - reservedHeight - verticalBorder);
+
+    size = Math.max(
+        18,
+        Math.min(
+            baseSize,
+            Math.floor(availableWidth / mazeCols),
+            Math.floor(availableHeight / mazeRows)
+        )
+    );
+
+    game.style.width =
+    mazeCols*size+"px";
+
+    game.style.height =
+    mazeRows*size+"px";
+
+    game.style.setProperty(
+        "--cell-size",
+        size+"px"
+    );
+
+    fog.width =
+    mazeCols*size;
+
+    fog.height =
+    mazeRows*size;
+
+    fog.style.width = "100%";
+    fog.style.height = "100%";
+
+    game.style.marginRight =
+    landscapeControls
+        ? controls.getBoundingClientRect().width + 16 + "px"
+        : "0px";
+
+    game.querySelectorAll(
+        ".cell,.enemy,.coin,.key,.exit"
+    ).forEach(el=>{
+
+        if(
+            el.dataset.x !== undefined &&
+            el.dataset.y !== undefined
+        ){
+            setCellBox(
+                el,
+                Number(el.dataset.x),
+                Number(el.dataset.y)
+            );
+        }
+
+    });
+
+    updatePlayer();
+
+}
 
 /* PLAYER */
 
@@ -516,6 +761,8 @@ function loadLevel(index){
         ".cell,.enemy,.coin,.key,.exit"
     ).forEach(el=>el.remove());
 
+    syncMazeSize();
+
     const map = levels[index];
 
     map.forEach((row,y)=>{
@@ -528,17 +775,7 @@ function loadLevel(index){
             div.className =
             "cell";
 
-            div.style.left =
-            x*size+"px";
-
-            div.style.top =
-            y*size+"px";
-
-            div.style.width =
-            size+"px";
-
-            div.style.height =
-            size+"px";
+            setCellBox(div,x,y);
 
             if(cell === "#"){
 
@@ -574,11 +811,7 @@ function loadLevel(index){
 
                 exit.innerHTML = "🚪";
 
-                exit.style.left =
-                x*size+"px";
-
-                exit.style.top =
-                y*size+"px";
+                setCellBox(exit,x,y);
 
                 exit.id = "exit";
 
@@ -597,11 +830,7 @@ function loadLevel(index){
 
                 key.innerHTML = "🔑";
 
-                key.style.left =
-                x*size+"px";
-
-                key.style.top =
-                y*size+"px";
+                setCellBox(key,x,y);
 
                 key.id = "key";
 
@@ -620,11 +849,7 @@ function loadLevel(index){
 
                 coin.innerHTML = "💰";
 
-                coin.style.left =
-                x*size+"px";
-
-                coin.style.top =
-                y*size+"px";
+                setCellBox(coin,x,y);
 
                 game.appendChild(coin);
 
@@ -656,11 +881,7 @@ function createEnemy(x,y){
 
     enemy.innerHTML = "👾";
 
-    enemy.style.left =
-    x*size+"px";
-
-    enemy.style.top =
-    y*size+"px";
+    setCellBox(enemy,x,y);
 
     game.appendChild(enemy);
 
@@ -919,11 +1140,7 @@ setInterval(()=>{
             enemy.x = nx;
             enemy.y = ny;
 
-            enemy.el.style.left =
-            nx*size+"px";
-
-            enemy.el.style.top =
-            ny*size+"px";
+            setCellBox(enemy.el,nx,ny);
 
         }
 
@@ -977,9 +1194,9 @@ function drawFog(){
     ctx.beginPath();
 
     ctx.arc(
-        playerX*size+20,
-        playerY*size+20,
-        120,
+        playerX*size+size/2,
+        playerY*size+size/2,
+        size*3,
         0,
         Math.PI*2
     );
@@ -994,6 +1211,17 @@ function drawFog(){
 /* KEYBOARD */
 
 document.addEventListener("keydown",(e)=>{
+
+    if(
+        [
+            "ArrowUp",
+            "ArrowDown",
+            "ArrowLeft",
+            "ArrowRight"
+        ].includes(e.key)
+    ){
+        e.preventDefault();
+    }
 
     if(e.key==="ArrowUp")
         move(0,-1);
@@ -1016,15 +1244,19 @@ let sy = 0;
 
 game.addEventListener("touchstart",(e)=>{
 
+    e.preventDefault();
+
     sx =
     e.touches[0].clientX;
 
     sy =
     e.touches[0].clientY;
 
-});
+},{passive:false});
 
 game.addEventListener("touchmove",(e)=>{
+
+    e.preventDefault();
 
     let dx =
     e.touches[0].clientX - sx;
@@ -1061,6 +1293,23 @@ game.addEventListener("touchmove",(e)=>{
         }
 
     }
+
+},{passive:false});
+
+let resizeTimer;
+
+addEventListener("resize",()=>{
+
+    clearTimeout(resizeTimer);
+
+    resizeTimer =
+    setTimeout(syncMazeSize,80);
+
+});
+
+addEventListener("orientationchange",()=>{
+
+    setTimeout(syncMazeSize,180);
 
 });
 
