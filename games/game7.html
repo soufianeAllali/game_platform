@@ -79,6 +79,7 @@ body{
     left:45%;
     width:150px;
     height:200px;
+    transform-origin:bottom center;
 }
 
 /* HEAD */
@@ -241,7 +242,7 @@ body{
 </style>
 <style>
 .hub-home-link{position:fixed;top:14px;left:14px;z-index:5000;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:10px 14px;border:2px solid rgba(255,255,255,.75);border-radius:999px;color:#16213f;background:rgba(255,255,255,.86);box-shadow:0 12px 28px rgba(20,30,60,.18);font-family:"Trebuchet MS","Comic Sans MS",Arial,sans-serif;font-size:14px;font-weight:900;text-decoration:none;backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease}.hub-home-link:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(20,30,60,.25)}
-html,body,#game{max-width:100%;touch-action:manipulation}.title{font-size:clamp(30px,8vw,60px);padding:0 14px}.hud{top:clamp(86px,15vh,110px);width:min(92vw,720px);justify-content:center;flex-wrap:wrap;gap:10px}.box{min-height:46px;padding:10px 14px;font-size:clamp(16px,4vw,26px)}.gameOver{padding:24px;text-align:center}.gameOver h1{font-size:clamp(42px,12vw,90px)}.gameOver h2{font-size:clamp(20px,6vw,34px)}.gameOver button{min-height:54px;font-size:clamp(18px,5vw,28px)}@media(max-width:560px){.hub-home-link{top:10px;left:10px;min-height:40px;padding:8px 12px}}
+html,body,#game{max-width:100%;touch-action:manipulation}.title{font-size:clamp(30px,8vw,60px);padding:0 14px}.hud{top:clamp(86px,15vh,110px);width:min(92vw,720px);justify-content:center;flex-wrap:wrap;gap:10px}.box{min-height:46px;padding:10px 14px;font-size:clamp(16px,4vw,26px)}.gameOver{padding:24px;text-align:center}.gameOver h1{font-size:clamp(42px,12vw,90px)}.gameOver h2{font-size:clamp(20px,6vw,34px)}.gameOver button{min-height:54px;font-size:clamp(18px,5vw,28px)}@media(max-width:760px){.chef{transform:scale(clamp(.58,18vw,.82));bottom:clamp(18px,5vh,40px)}}@media(max-width:560px){.hub-home-link{top:10px;left:10px;min-height:40px;padding:8px 12px}.chef{transform:scale(clamp(.5,22vw,.68))}}
 </style>
 </head>
 
@@ -356,8 +357,9 @@ function setChefFromTouch(e){
     if(!gameRunning) return;
 
     const touch = e.touches ? e.touches[0] : e;
-    const nextX = touch.clientX - chef.offsetWidth / 2;
-    const maxX = window.innerWidth - chef.offsetWidth;
+    const chefWidth = chef.getBoundingClientRect().width;
+    const nextX = touch.clientX - chefWidth / 2;
+    const maxX = window.innerWidth - chefWidth;
 
     chefX = Math.max(0,Math.min(nextX,maxX));
     chef.style.left = chefX + "px";
@@ -425,12 +427,21 @@ function moveChef(){
 
     if(
         keys["ArrowRight"] &&
-        chefX < window.innerWidth - 150
+        chefX < window.innerWidth - chef.getBoundingClientRect().width
     ){
 
         chefX += 10;
 
     }
+
+    chefX = Math.max(
+        0,
+        Math.min(
+            chefX,
+            window.innerWidth -
+            chef.getBoundingClientRect().width
+        )
+    );
 
     chef.style.left = chefX + "px";
 

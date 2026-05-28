@@ -53,7 +53,44 @@ function createPiece(data){const el=document.createElement("div");el.className="
 function applyPiece(p){p.el.style.zIndex=p.z;p.el.style.fontSize=`${42*p.size/100}px`;p.el.style.transform=`translate3d(${p.x}px,${p.y}px,0) rotate(${p.rot}deg) scaleX(${p.flip})`}
 function syncState(){state.pieces.forEach(p=>{p.el?.classList.toggle("selected",state.selected===p.id)});const p=current();if(p){els.size.value=p.size;els.rotate.value=p.rot}}
 function current(){return state.pieces.find(p=>p.id===state.selected)}
-function bindDrag(p){p.el.onpointerdown=e=>{e.preventDefault();ac();snapshot();state.selected=p.id;syncState();p.el.setPointerCapture(e.pointerId);const sx=e.clientX,sy=e.clientY,ox=p.x,oy=p.y;dragging={p,sx,sy,ox,oy,moved:false};p.z=++zCounter;applyPiece(p)};p.el.onpointermove=e=>{if(!dragging||dragging.p!==p)return;dragging.moved=true;p.x=dragging.ox+e.clientX-dragging.sx;p.y=dragging.oy+e.clientY-dragging.sy;applyPiece(p)};p.el.onpointerup=()=>{if(!dragging?.moved)state.history.pop();dragging=null}}
+function clampPiece(p){
+  const rect=els.stage.getBoundingClientRect();
+  const size=Math.max(36,42*p.size/100);
+  p.x=Math.max(-size*.45,Math.min(rect.width-size*.55,p.x));
+  p.y=Math.max(-size*.45,Math.min(rect.height-size*.55,p.y));
+}
+function bindDrag(p){
+  p.el.onpointerdown=e=>{
+    e.preventDefault();
+    ac();
+    snapshot();
+    state.selected=p.id;
+    syncState();
+    p.el.setPointerCapture?.(e.pointerId);
+    const sx=e.clientX,sy=e.clientY,ox=p.x,oy=p.y;
+    dragging={p,sx,sy,ox,oy,moved:false,id:e.pointerId};
+    p.z=++zCounter;
+    applyPiece(p);
+  };
+  p.el.onpointermove=e=>{
+    if(!dragging||dragging.p!==p)return;
+    e.preventDefault();
+    dragging.moved=true;
+    p.x=dragging.ox+e.clientX-dragging.sx;
+    p.y=dragging.oy+e.clientY-dragging.sy;
+    clampPiece(p);
+    applyPiece(p);
+  };
+  const end=e=>{
+    if(!dragging||dragging.p!==p)return;
+    if(!dragging.moved)state.history.pop();
+    p.el.releasePointerCapture?.(dragging.id ?? e.pointerId);
+    dragging=null;
+  };
+  p.el.onpointerup=end;
+  p.el.onpointercancel=end;
+  p.el.onlostpointercapture=end;
+}
 function updateSelected(fn){const p=current();if(!p)return;snapshot();fn(p);applyPiece(p);syncState();sound("tap")}
 els.color.oninput=e=>{els.body.style.setProperty("--body",e.target.value);burst(innerWidth/2,innerHeight/2,e.target.value,6)};
 els.size.oninput=e=>{const p=current();if(p){p.size=+e.target.value;applyPiece(p)}};
@@ -79,4 +116,4 @@ loadGallery=loadSavedMonster;
 $("#randomBtn").onclick=randomMonsterFixed;
 $("#saveBtn").onclick=()=>{const parts=state.pieces.length,stars=Math.min(3,Math.max(1,Math.floor(parts/4)));state.coins+=40*stars;state.xp+=20*stars;state.level=1+Math.floor(state.xp/120);state.gallery.unshift(saveCurrentMonster("👾",`Monster ${state.gallery.length+1}`));state.gallery=state.gallery.slice(0,12);showResult("Monster Saved!",stars,`You earned ${40*stars} coins.`);renderAll();sound("save")};
 $("#photoBtn").onclick=()=>{state.gallery.unshift(saveCurrentMonster("📸",`Snapshot ${state.gallery.length+1}`));state.gallery=state.gallery.slice(0,12);renderGallery();save();showResult("Photo Mode",3,"Monster snapshot saved in your gallery.");sound("save")};
-window.addEventListener("resize",resize);load();resize();renderAll();setTimeout(()=>els.loading.classList.remove("active"),850);requestAnimationFrame(loop);
+window.addEventListener("resize",()=>{resize();state.pieces.forEach(p=>{clampPiece(p);applyPiece(p)})});load();resize();renderAll();setTimeout(()=>els.loading.classList.remove("active"),850);requestAnimationFrame(loop);
