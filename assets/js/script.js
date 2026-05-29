@@ -8,6 +8,12 @@ const installAppButton = document.querySelector("#installAppButton");
 let activeFilter = "all";
 let deferredInstallPrompt = null;
 
+window.wonderPlayPWA = {
+  installPromptReady: false,
+  serviceWorkerReady: false,
+  displayMode: "browser"
+};
+
 function filterGames() {
   const query = searchInput.value.trim().toLowerCase();
   let visibleCount = 0;
@@ -75,30 +81,65 @@ function isStandaloneApp() {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
+      .then((registration) => {
+        window.wonderPlayPWA.serviceWorkerReady = true;
+        console.info("WonderPlay PWA: service worker registered.", registration.scope);
+      })
+      .catch((error) => {
+        console.warn("WonderPlay PWA: service worker registration failed.", error);
+      });
   });
+} else {
+  console.warn("WonderPlay PWA: service workers are not supported in this browser.");
 }
 
 if (installAppButton) {
+  installAppButton.hidden = true;
+  installAppButton.disabled = true;
+
+  window.wonderPlayPWA.displayMode = isStandaloneApp() ? "standalone" : "browser";
+
   window.addEventListener("beforeinstallprompt", (event) => {
     if (isStandaloneApp()) return;
 
     event.preventDefault();
     deferredInstallPrompt = event;
+    window.wonderPlayPWA.installPromptReady = true;
     installAppButton.hidden = false;
+    installAppButton.disabled = false;
+    console.info("WonderPlay PWA: install prompt is ready.");
   });
 
   installAppButton.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
+    if (!deferredInstallPrompt) {
+      installAppButton.hidden = true;
+      installAppButton.disabled = true;
+      console.warn("WonderPlay PWA: install prompt is not available yet.");
+      return;
+    }
 
-    installAppButton.hidden = true;
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
+    try {
+      installAppButton.disabled = true;
+      await deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      console.info("WonderPlay PWA: install prompt result.", choice.outcome);
+    } catch (error) {
+      console.warn("WonderPlay PWA: install prompt failed.", error);
+    } finally {
+      deferredInstallPrompt = null;
+      window.wonderPlayPWA.installPromptReady = false;
+      installAppButton.hidden = true;
+      installAppButton.disabled = true;
+    }
   });
 
   window.addEventListener("appinstalled", () => {
     deferredInstallPrompt = null;
+    window.wonderPlayPWA.installPromptReady = false;
+    window.wonderPlayPWA.displayMode = "standalone";
     installAppButton.hidden = true;
+    installAppButton.disabled = true;
+    console.info("WonderPlay PWA: app installed.");
   });
 }
