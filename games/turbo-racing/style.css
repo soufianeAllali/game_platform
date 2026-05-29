@@ -14,11 +14,13 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   color: var(--ink);
   font-family: "Trebuchet MS", "Comic Sans MS", Arial, sans-serif;
   background: #071021;
   touch-action: none;
+  overscroll-behavior: none;
 }
 
 button {
@@ -26,6 +28,7 @@ button {
   color: inherit;
   font: inherit;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .game-shell {
@@ -192,6 +195,7 @@ button {
 
 .touch-controls button {
   min-height: 66px;
+  min-width: 0;
   border-radius: 22px;
   color: #fff;
   background: linear-gradient(135deg, rgba(40,215,255,.7), rgba(255,61,154,.72));
@@ -201,6 +205,7 @@ button {
   touch-action: none;
   user-select: none;
   will-change: transform;
+  line-height: 1;
 }
 
 .touch-controls button:active {
@@ -215,6 +220,7 @@ button {
   overflow: auto;
   border-radius: 30px;
   padding: clamp(18px, 4vw, 36px);
+  padding-bottom: max(clamp(18px, 4vw, 36px), env(safe-area-inset-bottom));
   contain: layout paint;
 }
 
@@ -478,6 +484,7 @@ p {
     justify-content: flex-start;
     overflow-x: auto;
     scrollbar-width: none;
+    padding-bottom: 2px;
   }
 
   .hud-card {
@@ -491,15 +498,18 @@ p {
   .race-feed {
     bottom: max(94px, calc(env(safe-area-inset-bottom) + 94px));
     font-size: .88rem;
+    max-width: min(260px, calc(100vw - 24px));
   }
 
   .menu-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .touch-controls button {
     min-height: 58px;
     border-radius: 18px;
+    font-size: 1.35rem;
   }
 
   .screen {
@@ -514,6 +524,56 @@ p {
   .home { width: 42px; min-width: 42px; height: 42px; }
   .meters { top: 60px; }
   .menu-grid { grid-template-columns: 1fr; }
+  .touch-controls {
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+  .touch-controls button {
+    min-height: 52px;
+    border-radius: 16px;
+  }
+  .race-feed {
+    display: none;
+  }
+}
+
+@media (max-height: 620px) {
+  .race-feed {
+    display: none;
+  }
+  .touch-controls {
+    grid-template-columns: repeat(4, minmax(54px, 1fr));
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .touch-controls button {
+    min-height: 48px;
+    border-radius: 15px;
+    font-size: 1.15rem;
+  }
+  .screen {
+    inset: 8px;
+    padding: 14px;
+  }
+  h1 {
+    font-size: clamp(2.1rem, 8vw, 4.2rem);
+  }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .top-hud {
+    right: calc(max(10px, env(safe-area-inset-right)) + 235px);
+  }
+  .meters {
+    width: min(360px, calc(100vw - 250px));
+  }
+  .touch-controls {
+    left: auto;
+    right: max(8px, env(safe-area-inset-right));
+    width: min(228px, 38vw);
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

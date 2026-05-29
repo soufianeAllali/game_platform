@@ -43,6 +43,32 @@ body{
     user-select:none;
 }
 
+.home-btn{
+    position:fixed;
+    top:max(10px,env(safe-area-inset-top));
+    left:max(10px,env(safe-area-inset-left));
+    z-index:500;
+    min-width:58px;
+    min-height:42px;
+    display:grid;
+    place-items:center;
+    padding:8px 14px;
+    border-radius:999px;
+    color:white;
+    text-decoration:none;
+    font-weight:900;
+    font-size:16px;
+    background:rgba(15,23,42,.72);
+    border:2px solid rgba(255,255,255,.48);
+    box-shadow:0 10px 24px rgba(0,0,0,.26),0 0 18px rgba(0,255,255,.22);
+    backdrop-filter:blur(12px);
+    touch-action:manipulation;
+}
+
+.home-btn:active{
+    transform:translateY(2px);
+}
+
 /* TITLE */
 
 .title{
@@ -339,6 +365,8 @@ body{
 </head>
 
 <body>
+
+<a class="home-btn" href="../index.html" aria-label="Back to home">Home</a>
 
 <div class="title">
     🌀 ULTRA MAZE QUEST 🌀
