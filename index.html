@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>WonderPlay Kids Game Hub</title>
+  <meta name="theme-color" content="#ff5ea8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="WonderPlay">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -29,6 +36,7 @@
         <div class="hero-actions">
           <a class="primary-action" href="#games">Explore Games</a>
           <a class="secondary-action play-link" href="games/game5.html">Featured Play</a>
+          <button class="install-action" id="installAppButton" type="button" >Install App</button>
         </div>
         <div class="visitor-counter" aria-live="polite">
           <span class="visitor-icon" aria-hidden="true">👀</span>

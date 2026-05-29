@@ -3,8 +3,10 @@ const filterButtons = [...document.querySelectorAll(".filter-button")];
 const cards = [...document.querySelectorAll(".game-card")];
 const emptyState = document.querySelector("#emptyState");
 const pageLoader = document.querySelector("#pageLoader");
+const installAppButton = document.querySelector("#installAppButton");
 
 let activeFilter = "all";
+let deferredInstallPrompt = null;
 
 function filterGames() {
   const query = searchInput.value.trim().toLowerCase();
@@ -66,3 +68,37 @@ document.querySelectorAll("[data-tilt]").forEach((card) => {
     card.style.transform = "";
   });
 });
+
+function isStandaloneApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  });
+}
+
+if (installAppButton) {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    if (isStandaloneApp()) return;
+
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installAppButton.hidden = false;
+  });
+
+  installAppButton.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+
+    installAppButton.hidden = true;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    installAppButton.hidden = true;
+  });
+}
