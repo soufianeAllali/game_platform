@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Neon Air Hockey Duel - WonderPlay</title>
+  <meta name="description" content="Play Neon Air Hockey Duel, a smooth two-player HTML5 air hockey game with responsive controls, pause, restart, sound effects, and polished arcade visuals.">
+  <meta property="og:type" content="game">
+  <meta property="og:title" content="Neon Air Hockey Duel">
+  <meta property="og:description" content="A responsive two-player neon air hockey game for browser play.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Neon Air Hockey Duel">
+  <meta name="twitter:description" content="Play a polished air hockey duel on desktop, tablet, or mobile.">
+  <style>
+    :root { --bg: #07111f; --panel: rgba(11, 23, 40, .78); --line: rgba(255,255,255,.14); --p1: #ff4fa3; --p2: #26d9ff; --gold: #ffd166; --text: #f7fbff; --muted: #aab7ca; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 16px; color: var(--text); font-family: Inter, "Segoe UI", Arial, sans-serif; background: radial-gradient(circle at 20% 12%, rgba(255,79,163,.28), transparent 28%), radial-gradient(circle at 82% 8%, rgba(38,217,255,.24), transparent 28%), linear-gradient(145deg, #07111f, #11182b 58%, #09111d); overflow-x: hidden; }
+    main { width: min(1120px, 100%); display: grid; grid-template-columns: minmax(280px, 360px) minmax(300px, 1fr); gap: 18px; align-items: center; }
+    .side, .stage { border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 24px 70px rgba(0,0,0,.35); backdrop-filter: blur(18px); }
+    .side { padding: 22px; }
+    a { color: inherit; text-decoration: none; }
+    .back { display: inline-flex; margin-bottom: 18px; color: var(--muted); font-weight: 800; }
+    h1 { margin: 0; font-size: clamp(2rem, 6vw, 4.2rem); line-height: .94; letter-spacing: 0; }
+    .lead { color: var(--muted); line-height: 1.6; font-weight: 650; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+    .stat { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.06); }
+    .stat span { display: block; color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+    .stat strong { font-size: 1.55rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+    button { min-height: 44px; border: 0; border-radius: 12px; padding: 10px 14px; color: #07111f; background: linear-gradient(135deg, var(--gold), #ff8a4f); font: inherit; font-weight: 900; cursor: pointer; }
+    button.secondary { color: var(--text); background: rgba(255,255,255,.09); border: 1px solid var(--line); }
+    .instructions { margin-top: 18px; color: var(--muted); font-size: .94rem; line-height: 1.55; }
+    .instructions strong { color: var(--text); }
+    .stage { position: relative; padding: 12px; }
+    canvas { width: 100%; aspect-ratio: 3 / 4; max-height: calc(100dvh - 32px); display: block; border-radius: 14px; background: #07111f; touch-action: none; }
+    .overlay { position: absolute; inset: 12px; display: grid; place-items: center; padding: 22px; text-align: center; border-radius: 14px; background: rgba(5, 10, 20, .86); }
+    .overlay.hidden { display: none; }
+    .overlay h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 3rem); }
+    .overlay p { max-width: 480px; margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
+    @media (max-width: 860px) { body { place-items: start center; } main { grid-template-columns: 1fr; } .side { order: 2; } .stage { order: 1; } canvas { max-height: 70dvh; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="side" aria-labelledby="game-title">
+      <a class="back" href="../index.html">Back to games</a>
+      <h1 id="game-title">Neon Air Hockey Duel</h1>
+      <p class="lead">Defend your goal, strike clean angles, and be first to seven points in this fast same-device arcade match.</p>
+      <div class="stats" aria-label="Match score">
+        <div class="stat"><span>Pink</span><strong id="p1Score">0</strong></div>
+        <div class="stat"><span>Blue</span><strong id="p2Score">0</strong></div>
+        <div class="stat"><span>Target</span><strong>7</strong></div>
+      </div>
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="pauseBtn" class="secondary" type="button">Pause</button>
+        <button id="restartBtn" class="secondary" type="button">Restart</button>
+        <button id="soundBtn" class="secondary" type="button" aria-pressed="true">Sound On</button>
+      </div>
+      <p class="instructions"><strong>Desktop:</strong> Pink uses W A S D. Blue uses arrow keys. <strong>Touch:</strong> drag each paddle inside its half. Keep the puck out of your goal.</p>
+    </section>
+    <section class="stage" aria-label="Neon air hockey game area">
+      <canvas id="gameCanvas" width="450" height="600"></canvas>
+      <div id="overlay" class="overlay">
+        <div>
+          <h2 id="overlayTitle">Ready for the face-off?</h2>
+          <p id="overlayText">Use keyboard or touch controls. The first player to 7 points wins.</p>
+          <button id="overlayBtn" type="button">Play Match</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const canvas = document.querySelector("#gameCanvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const overlay = document.querySelector("#overlay");
+    const overlayTitle = document.querySelector("#overlayTitle");
+    const overlayText = document.querySelector("#overlayText");
+    const p1ScoreEl = document.querySelector("#p1Score");
+    const p2ScoreEl = document.querySelector("#p2Score");
+    const startBtn = document.querySelector("#startBtn");
+    const pauseBtn = document.querySelector("#pauseBtn");
+    const restartBtn = document.querySelector("#restartBtn");
+    const soundBtn = document.querySelector("#soundBtn");
+    const overlayBtn = document.querySelector("#overlayBtn");
+    const W = canvas.width, H = canvas.height, GOAL = 150, TARGET = 7;
+    const keys = new Set();
+    let audioCtx, soundOn = true, running = false, paused = false, last = 0, hitFlash = 0;
+    const puck = { x: W / 2, y: H / 2, vx: 0, vy: 3.8, r: 13, max: 10.5 };
+    const p1 = { x: W / 2, y: 120, vx: 0, vy: 0, r: 27, score: 0, color: "#ff4fa3", touch: null };
+    const p2 = { x: W / 2, y: 480, vx: 0, vy: 0, r: 27, score: 0, color: "#26d9ff", touch: null };
+    addEventListener("keydown", e => { if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault(); keys.add(e.key.toLowerCase()); if (e.key.toLowerCase() === "p") togglePause(); }, { passive: false });
+    addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+    canvas.addEventListener("pointerdown", handlePointer, { passive: false });
+    canvas.addEventListener("pointermove", handlePointer, { passive: false });
+    canvas.addEventListener("pointerup", releasePointer);
+    canvas.addEventListener("pointercancel", releasePointer);
+    [startBtn, overlayBtn].forEach(btn => btn.addEventListener("click", startGame));
+    restartBtn.addEventListener("click", startGame);
+    pauseBtn.addEventListener("click", togglePause);
+    soundBtn.addEventListener("click", () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? "Sound On" : "Sound Off"; soundBtn.setAttribute("aria-pressed", String(soundOn)); });
+    function startGame() { primeAudio(); Object.assign(p1, { x: W / 2, y: 120, score: 0 }); Object.assign(p2, { x: W / 2, y: 480, score: 0 }); resetPuck(Math.random() > .5 ? 1 : -1); running = true; paused = false; last = performance.now(); overlay.classList.add("hidden"); updateScore(); requestAnimationFrame(loop); }
+    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; overlayTitle.textContent = "Paused"; overlayText.textContent = "Take a breath, then resume the match."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
+    function loop(now) { if (!running || paused) return; const dt = Math.min(32, now - last) / 16.67; last = now; update(dt); draw(now); requestAnimationFrame(loop); }
+    function update(dt) { movePlayer(p1, dt, "w", "s", "a", "d", 0, H / 2); movePlayer(p2, dt, "arrowup", "arrowdown", "arrowleft", "arrowright", H / 2, H); puck.x += puck.vx * dt; puck.y += puck.vy * dt; puck.vx *= .996; puck.vy *= .996; wallBounce(); collide(p1); collide(p2); hitFlash = Math.max(0, hitFlash - dt * .08); }
+    function movePlayer(p, dt, up, down, left, right, minY, maxY) { const oldX = p.x, oldY = p.y, speed = 6.8 * dt; if (p.touch) { p.x += (p.touch.x - p.x) * .32; p.y += (p.touch.y - p.y) * .32; } else { if (keys.has(up)) p.y -= speed; if (keys.has(down)) p.y += speed; if (keys.has(left)) p.x -= speed; if (keys.has(right)) p.x += speed; } p.x = clamp(p.x, p.r, W - p.r); p.y = clamp(p.y, minY + p.r, maxY - p.r); p.vx = p.x - oldX; p.vy = p.y - oldY; }
+    function wallBounce() { if (puck.x < puck.r || puck.x > W - puck.r) { puck.x = clamp(puck.x, puck.r, W - puck.r); puck.vx *= -1; beep(220, .04); } const inGoal = puck.x > (W - GOAL) / 2 && puck.x < (W + GOAL) / 2; if (puck.y < -puck.r && inGoal) score(p2, 1); else if (puck.y > H + puck.r && inGoal) score(p1, -1); else { if (puck.y < puck.r) { puck.y = puck.r; puck.vy *= -1; } if (puck.y > H - puck.r) { puck.y = H - puck.r; puck.vy *= -1; } } }
+    function collide(p) { const dx = puck.x - p.x, dy = puck.y - p.y, dist = Math.hypot(dx, dy), min = puck.r + p.r; if (dist >= min) return; const a = Math.atan2(dy, dx), power = Math.min(puck.max, 5.2 + Math.hypot(p.vx, p.vy) * .55); puck.x = p.x + Math.cos(a) * min; puck.y = p.y + Math.sin(a) * min; puck.vx = Math.cos(a) * power + p.vx * .16; puck.vy = Math.sin(a) * power + p.vy * .16; hitFlash = 1; beep(420, .035); }
+    function score(player, dir) { player.score++; updateScore(); beep(120, .12); if (player.score >= TARGET) { running = false; overlayTitle.textContent = `${player === p1 ? "Pink" : "Blue"} wins!`; overlayText.textContent = "Great match. Restart for a fresh duel."; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); return; } resetPuck(dir); }
+    function resetPuck(dir) { puck.x = W / 2; puck.y = H / 2; puck.vx = (Math.random() - .5) * 2; puck.vy = 3.9 * dir; }
+    function draw(now) { ctx.fillStyle = "#07111f"; ctx.fillRect(0,0,W,H); drawField(now); drawScoreGhost(); drawDisc(p1); drawDisc(p2); drawPuck(); }
+    function drawField(now) { ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke(); ctx.beginPath(); ctx.arc(W/2,H/2,62,0,Math.PI*2); ctx.stroke(); ctx.fillStyle = p1.color; ctx.fillRect((W-GOAL)/2,0,GOAL,7); ctx.fillStyle = p2.color; ctx.fillRect((W-GOAL)/2,H-7,GOAL,7); for (let y = 34; y < H; y += 46) { ctx.fillStyle = `rgba(255,255,255,${.025 + Math.sin(now * .002 + y) * .015})`; ctx.fillRect(24,y,W-48,1); } }
+    function drawScoreGhost() { ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "900 72px Segoe UI, sans-serif"; ctx.fillStyle = "rgba(255,79,163,.11)"; ctx.fillText(p1.score, W/2, H*.25); ctx.fillStyle = "rgba(38,217,255,.11)"; ctx.fillText(p2.score, W/2, H*.75); }
+    function drawDisc(p) { const g = ctx.createRadialGradient(p.x-8,p.y-8,4,p.x,p.y,p.r); g.addColorStop(0,"#fff"); g.addColorStop(.22,p.color); g.addColorStop(1,"#121729"); ctx.shadowBlur = 18; ctx.shadowColor = p.color; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
+    function drawPuck() { ctx.shadowBlur = 18 + hitFlash * 12; ctx.shadowColor = "#fff"; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(puck.x,puck.y,puck.r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
+    function handlePointer(e) { e.preventDefault(); const pos = pointerPos(e); const p = pos.y < H / 2 ? p1 : p2; p.touch = pos; }
+    function releasePointer(e) { const pos = pointerPos(e); (pos.y < H / 2 ? p1 : p2).touch = null; }
+    function pointerPos(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
+    function updateScore() { p1ScoreEl.textContent = p1.score; p2ScoreEl.textContent = p2.score; }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function primeAudio() { if (!audioCtx) audioCtx = new (AudioContext || webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); }
+    function beep(freq, time) { if (!soundOn || !audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "triangle"; o.frequency.value = freq; g.gain.value = .035; g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + time); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + time); }
+    draw(performance.now());
+  </script>
+</body>
+</html>

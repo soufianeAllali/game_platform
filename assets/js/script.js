@@ -4,6 +4,7 @@ const cards = [...document.querySelectorAll(".game-card")];
 const emptyState = document.querySelector("#emptyState");
 const pageLoader = document.querySelector("#pageLoader");
 const installAppButton = document.querySelector("#installAppButton");
+const visitorCount = document.querySelector("#visitorCount");
 
 let activeFilter = "all";
 let deferredInstallPrompt = null;
@@ -43,6 +44,30 @@ filterButtons.forEach((button) => {
     filterGames();
   });
 });
+
+async function updateVisitorCounter() {
+  if (!visitorCount) return;
+
+  const namespace = "wonderplay-kids-game-hub";
+  const key = "unique-visitors";
+  const countedKey = "wonderplayVisitorCounted";
+  const endpoint = localStorage.getItem(countedKey)
+    ? `https://api.countapi.xyz/get/${namespace}/${key}`
+    : `https://api.countapi.xyz/hit/${namespace}/${key}`;
+
+  try {
+    const response = await fetch(endpoint, { cache: "no-store" });
+    if (!response.ok) throw new Error("Counter request failed.");
+    const data = await response.json();
+    localStorage.setItem(countedKey, "true");
+    visitorCount.textContent = Number(data.value || 0).toLocaleString();
+  } catch (error) {
+    visitorCount.textContent = "Live";
+    console.warn("WonderPlay visitor counter unavailable.", error);
+  }
+}
+
+updateVisitorCounter();
 
 document.querySelectorAll(".play-link").forEach((link) => {
   link.addEventListener("click", (event) => {

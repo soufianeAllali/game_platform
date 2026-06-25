@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Ricochet Tank Arena - WonderPlay</title>
+  <meta name="description" content="Play Ricochet Tank Arena, a responsive HTML5 tank battle with power-ups, bot mode, shields, pause, restart, touch controls, and modern arcade effects.">
+  <meta property="og:type" content="game">
+  <meta property="og:title" content="Ricochet Tank Arena">
+  <meta property="og:description" content="Battle with ricocheting shots, shields, power-ups, and optional bot mode.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Ricochet Tank Arena">
+  <meta name="twitter:description" content="A polished browser tank battle for desktop and mobile.">
+  <style>
+    :root { --bg: #080d18; --panel: rgba(13, 21, 36, .82); --line: rgba(255,255,255,.14); --pink: #ff4fa3; --cyan: #27d9ff; --gold: #ffd166; --green: #56d67b; --text: #f8fbff; --muted: #aab7ca; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 16px; color: var(--text); font-family: Inter, "Segoe UI", Arial, sans-serif; background: radial-gradient(circle at 18% 12%, rgba(255,79,163,.24), transparent 26%), radial-gradient(circle at 82% 12%, rgba(39,217,255,.22), transparent 26%), linear-gradient(145deg, #080d18, #17182c 55%, #0b1522); overflow-x: hidden; }
+    main { width: min(1180px, 100%); display: grid; grid-template-columns: minmax(280px, 370px) minmax(320px, 1fr); gap: 18px; align-items: center; }
+    .side, .stage, .touch { border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 24px 70px rgba(0,0,0,.36); backdrop-filter: blur(18px); }
+    .side { padding: 22px; }
+    a { color: inherit; text-decoration: none; }
+    .back { display: inline-flex; margin-bottom: 18px; color: var(--muted); font-weight: 850; }
+    h1 { margin: 0; font-size: clamp(2rem, 6vw, 4.1rem); line-height: .94; letter-spacing: 0; }
+    .lead, .instructions { color: var(--muted); line-height: 1.6; font-weight: 650; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+    .stat { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.06); }
+    .stat span { display: block; color: var(--muted); font-size: .75rem; font-weight: 900; text-transform: uppercase; }
+    .stat strong { font-size: 1.45rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+    button { min-height: 44px; border: 0; border-radius: 12px; padding: 10px 14px; color: #08101c; background: linear-gradient(135deg, var(--gold), #ff8a4f); font: inherit; font-weight: 950; cursor: pointer; }
+    button.secondary { color: var(--text); background: rgba(255,255,255,.09); border: 1px solid var(--line); }
+    .stage { position: relative; padding: 12px; }
+    canvas { width: 100%; aspect-ratio: 7 / 5; max-height: calc(100dvh - 32px); display: block; border-radius: 14px; background: #0a1020; touch-action: none; }
+    .overlay { position: absolute; inset: 12px; display: grid; place-items: center; padding: 22px; text-align: center; border-radius: 14px; background: rgba(5, 10, 20, .88); }
+    .overlay.hidden { display: none; }
+    .overlay h2 { margin: 0 0 10px; font-size: clamp(1.55rem, 5vw, 3rem); }
+    .overlay p { max-width: 560px; margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
+    .touch { display: none; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; margin-top: 12px; }
+    .touch-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .touch button { padding: 8px; min-height: 42px; }
+    @media (max-width: 900px) { body { place-items: start center; } main { grid-template-columns: 1fr; } .side { order: 2; } .stage { order: 1; } canvas { max-height: 62dvh; } .touch { display: grid; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="side" aria-labelledby="game-title">
+      <a class="back" href="../index.html">Back to games</a>
+      <h1 id="game-title">Ricochet Tank Arena</h1>
+      <p class="lead">Bounce shots around the arena, trigger shields at the right moment, and grab power-ups before your rival does.</p>
+      <div class="stats" aria-label="Battle score">
+        <div class="stat"><span>Pink</span><strong id="p1Score">0</strong></div>
+        <div class="stat"><span>Blue</span><strong id="p2Score">0</strong></div>
+        <div class="stat"><span>Goal</span><strong>3</strong></div>
+      </div>
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="pauseBtn" class="secondary" type="button">Pause</button>
+        <button id="restartBtn" class="secondary" type="button">Restart</button>
+        <button id="botBtn" class="secondary" type="button" aria-pressed="true">Bot On</button>
+        <button id="soundBtn" class="secondary" type="button" aria-pressed="true">Sound On</button>
+      </div>
+      <p class="instructions"><strong>Player 1:</strong> Space to move, Q to fire, E for shield. <strong>Player 2:</strong> Enter to move, I to fire, O for shield. On touch screens, use the action buttons below the arena.</p>
+    </section>
+    <section>
+      <div class="stage" aria-label="Tank battle game area">
+        <canvas id="gameCanvas" width="700" height="500"></canvas>
+        <div id="overlay" class="overlay">
+          <div>
+            <h2 id="overlayTitle">Enter the arena</h2>
+            <p id="overlayText">First tank to 3 points wins. Bullets bounce, power-ups shift momentum, and shields block one hit.</p>
+            <button id="overlayBtn" type="button">Start Battle</button>
+          </div>
+        </div>
+      </div>
+      <div class="touch" aria-label="Touch controls">
+        <div class="touch-group">
+          <button data-key=" ">Move P1</button><button data-fire="p1">Fire</button><button data-shield="p1">Shield</button>
+        </div>
+        <div class="touch-group">
+          <button data-key="Enter">Move P2</button><button data-fire="p2">Fire</button><button data-shield="p2">Shield</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const canvas = document.querySelector("#gameCanvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const overlay = document.querySelector("#overlay");
+    const overlayTitle = document.querySelector("#overlayTitle");
+    const overlayText = document.querySelector("#overlayText");
+    const overlayBtn = document.querySelector("#overlayBtn");
+    const p1ScoreEl = document.querySelector("#p1Score");
+    const p2ScoreEl = document.querySelector("#p2Score");
+    const startBtn = document.querySelector("#startBtn");
+    const pauseBtn = document.querySelector("#pauseBtn");
+    const restartBtn = document.querySelector("#restartBtn");
+    const botBtn = document.querySelector("#botBtn");
+    const soundBtn = document.querySelector("#soundBtn");
+    const W = canvas.width, H = canvas.height, TARGET = 3;
+    const keys = {};
+    const walls = [{x:205,y:145,w:42,h:210},{x:453,y:145,w:42,h:210},{x:315,y:72,w:70,h:38},{x:315,y:390,w:70,h:38}];
+    const powerTypes = [{kind:"triple", label:"3X", color:"#ffd166"},{kind:"speed", label:"SPD", color:"#56d67b"},{kind:"mega", label:"MAX", color:"#ff884d"}];
+    let t1, t2, bullets = [], sparks = [], powers = [], running = false, paused = false, bot = true, soundOn = true, audioCtx, last = 0, powerTimer = 0, shake = 0;
+    addEventListener("keydown", e => { if ([" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault(); keys[e.key] = true; const k = e.key.toLowerCase(); if (k === "q") fire(t1); if (k === "i" && !bot) fire(t2); if (k === "e") shield(t1); if (k === "o" && !bot) shield(t2); if (k === "p") togglePause(); }, { passive: false });
+    addEventListener("keyup", e => keys[e.key] = false);
+    document.querySelectorAll(".touch button").forEach(btn => { btn.addEventListener("pointerdown", e => { e.preventDefault(); if (btn.dataset.key) keys[btn.dataset.key] = true; if (btn.dataset.fire === "p1") fire(t1); if (btn.dataset.fire === "p2" && !bot) fire(t2); if (btn.dataset.shield === "p1") shield(t1); if (btn.dataset.shield === "p2" && !bot) shield(t2); }); btn.addEventListener("pointerup", () => { if (btn.dataset.key) keys[btn.dataset.key] = false; }); });
+    [startBtn, overlayBtn].forEach(btn => btn.addEventListener("click", () => paused ? togglePause() : startGame()));
+    restartBtn.addEventListener("click", startGame);
+    pauseBtn.addEventListener("click", togglePause);
+    botBtn.addEventListener("click", () => { bot = !bot; botBtn.textContent = bot ? "Bot On" : "Bot Off"; botBtn.setAttribute("aria-pressed", String(bot)); });
+    soundBtn.addEventListener("click", () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? "Sound On" : "Sound Off"; soundBtn.setAttribute("aria-pressed", String(soundOn)); });
+    function tank(id,x,y,a,color,key){ return {id,x,y,a,color,key,r:18,score:0,ammo:5,lastShot:0,shield:false,shieldReady:true,power:null,powerUntil:0,move:false}; }
+    function startGame(){ primeAudio(); t1 = tank("p1",82,H/2,0,"#ff4fa3"," "); t2 = tank("p2",W-82,H/2,Math.PI,"#27d9ff","Enter"); bullets=[]; sparks=[]; powers=[]; powerTimer=1800; running=true; paused=false; last=performance.now(); overlay.classList.add("hidden"); updateHud(); requestAnimationFrame(loop); }
+    function togglePause(){ if(!running) return; paused=!paused; pauseBtn.textContent=paused?"Resume":"Pause"; overlayTitle.textContent="Paused"; overlayText.textContent="The arena is frozen until you resume."; overlayBtn.textContent="Resume"; overlay.classList.toggle("hidden",!paused); if(!paused){ last=performance.now(); requestAnimationFrame(loop); } }
+    function loop(now){ if(!running||paused) return; const dt=Math.min(32,now-last); last=now; update(dt,now); draw(now); requestAnimationFrame(loop); }
+    function update(dt,now){ powerTimer-=dt; if(powerTimer<=0){ spawnPower(); powerTimer=7600; } updateTank(t1,dt,now,false); if(bot) updateBot(now); updateTank(t2,dt,now,bot); updateBullets(dt,now); updateSparks(dt); collect(t1,now); collect(t2,now); powers=powers.filter(p=>p.until>now); shake=Math.max(0,shake-dt*.02); }
+    function updateTank(t,dt,now,controlled){ if(t.power&&now>t.powerUntil)t.power=null; const moving = controlled ? t.move : keys[t.key]; if(moving){ const speed=(t.power==="speed"? .23:.16)*dt; move(t,Math.cos(t.a)*speed,Math.sin(t.a)*speed); } else t.a += .0024*dt; }
+    function updateBot(now){ const dx=t1.x-t2.x,dy=t1.y-t2.y,desired=Math.atan2(dy,dx); t2.a += clamp(angleDiff(t2.a,desired),-.055,.055); t2.move=Math.hypot(dx,dy)>155 || Math.abs(angleDiff(t2.a,desired))<.35; if(Math.abs(angleDiff(t2.a,desired))<.18 && now-t2.lastShot>620) fire(t2); const danger=bullets.find(b=>b.owner==="p1"&&Math.hypot(b.x-t2.x,b.y-t2.y)<72); if(danger) shield(t2); }
+    function move(t,dx,dy){ const nx=clamp(t.x+dx,t.r,W-t.r),ny=clamp(t.y+dy,t.r,H-t.r); if(!walls.some(w=>circleRect(nx,ny,t.r,w))){ t.x=nx; t.y=ny; } }
+    function fire(t){ if(!running||!t) return; const now=performance.now(); if(now-t.lastShot<260) return; const spreads=t.power==="triple"?[-.24,0,.24]:[0]; spreads.forEach(s=>bullets.push({owner:t.id,x:t.x+Math.cos(t.a+s)*28,y:t.y+Math.sin(t.a+s)*28,vx:Math.cos(t.a+s)*(t.power==="mega"?.5:.38),vy:Math.sin(t.a+s)*(t.power==="mega"?.5:.38),r:t.power==="mega"?7:4,color:t.power==="mega"?"#ffd166":t.color,bounce:t.power==="mega"?5:3})); t.lastShot=now; burst(t.x+Math.cos(t.a)*30,t.y+Math.sin(t.a)*30,t.color,6); beep(320,.04); }
+    function shield(t){ if(!running||!t||!t.shieldReady) return; t.shield=true; t.shieldReady=false; burst(t.x,t.y,"#9fffee",14); beep(620,.06); setTimeout(()=>{ if(t) t.shield=false; },2600); setTimeout(()=>{ if(t) t.shieldReady=true; },5200); }
+    function updateBullets(dt){ for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; sparks.push({x:b.x,y:b.y,vx:-b.vx*10,vy:-b.vy*10,life:180,max:180,r:1.6,color:b.color}); if(b.x<b.r||b.x>W-b.r){ b.x=clamp(b.x,b.r,W-b.r); b.vx*=-1; b.bounce--; } if(b.y<b.r||b.y>H-b.r){ b.y=clamp(b.y,b.r,H-b.r); b.vy*=-1; b.bounce--; } for(const w of walls){ if(circleRect(b.x,b.y,b.r,w)){ const side=Math.min(Math.abs(b.x-w.x),Math.abs(b.x-w.x-w.w)); if(side<Math.min(Math.abs(b.y-w.y),Math.abs(b.y-w.y-w.h))) b.vx*=-1; else b.vy*=-1; b.bounce--; break; } } if(hit(b,t1)){ bullets.splice(i,1); point(t2,t1,b); continue; } if(hit(b,t2)){ bullets.splice(i,1); point(t1,t2,b); continue; } if(b.bounce<0) bullets.splice(i,1); } if(bullets.length>60) bullets.splice(0,bullets.length-60); }
+    function point(winner,victim,b){ burst(victim.x,victim.y,b.color,22); shake=7; beep(120,.1); if(victim.shield){ victim.shield=false; return; } winner.score++; updateHud(); if(winner.score>=TARGET){ running=false; overlayTitle.textContent=`${winner===t1?"Pink":"Blue"} wins!`; overlayText.textContent="Restart for another ricochet battle."; overlayBtn.textContent="Play Again"; overlay.classList.remove("hidden"); return; } const s1=t1.score,s2=t2.score; startRound(); t1.score=s1; t2.score=s2; updateHud(); }
+    function startRound(){ t1.x=82;t1.y=H/2;t1.a=0;t1.power=null;t2.x=W-82;t2.y=H/2;t2.a=Math.PI;t2.power=null;bullets=[];powers=[]; }
+    function spawnPower(){ const def=powerTypes[Math.floor(Math.random()*powerTypes.length)]; let p; for(let i=0;i<25;i++){ p={...def,x:80+Math.random()*(W-160),y:70+Math.random()*(H-140),r:16,until:performance.now()+10000}; if(!walls.some(w=>circleRect(p.x,p.y,p.r,w))) break; } powers.push(p); }
+    function collect(t,now){ for(let i=powers.length-1;i>=0;i--){ const p=powers[i]; if(Math.hypot(t.x-p.x,t.y-p.y)>t.r+p.r) continue; powers.splice(i,1); t.power=p.kind; t.powerUntil=now+6500; burst(p.x,p.y,p.color,18); beep(760,.05); } }
+    function draw(now){ ctx.save(); if(shake) ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); ctx.fillStyle="#0a1020"; ctx.fillRect(0,0,W,H); arena(now); walls.forEach(w=>{ctx.fillStyle="#1b2742";ctx.fillRect(w.x,w.y,w.w,w.h);ctx.strokeStyle="rgba(255,255,255,.18)";ctx.strokeRect(w.x,w.y,w.w,w.h);}); powers.forEach(p=>{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(now*.003);ctx.fillStyle="#10192d";ctx.strokeStyle=p.color;ctx.lineWidth=3;ctx.fillRect(-15,-15,30,30);ctx.strokeRect(-15,-15,30,30);ctx.fillStyle=p.color;ctx.font="900 10px Segoe UI";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(p.label,0,1);ctx.restore();}); bullets.forEach(b=>{ctx.shadowBlur=12;ctx.shadowColor=b.color;ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}); drawSparks(); drawTank(t1,now); drawTank(t2,now); ctx.restore(); }
+    function arena(now){ ctx.strokeStyle="rgba(255,255,255,.06)"; ctx.lineWidth=1; for(let x=50;x<W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();} for(let y=50;y<H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();} ctx.strokeStyle="rgba(255,209,102,.2)"; ctx.lineWidth=3; ctx.strokeRect(8,8,W-16,H-16); ctx.fillStyle=`rgba(255,255,255,${.035+Math.sin(now*.004)*.015})`; ctx.fillRect(W/2-1,0,2,H); }
+    function drawTank(t,now){ ctx.save(); ctx.translate(t.x,t.y); ctx.rotate(t.a); ctx.shadowBlur=14; ctx.shadowColor=t.color; ctx.fillStyle=t.color; ctx.fillRect(-16,-16,32,32); ctx.fillStyle=t.power==="mega"?"#ffd166":"#fff"; ctx.fillRect(0,-4,t.power==="mega"?31:25,8); ctx.restore(); ctx.shadowBlur=0; if(t.shield){ctx.strokeStyle="#9fffee";ctx.lineWidth=3;ctx.beginPath();ctx.arc(t.x,t.y,t.r+12,0,Math.PI*2);ctx.stroke();} if(t.power){ctx.fillStyle=t.color;ctx.font="900 11px Segoe UI";ctx.textAlign="center";ctx.fillText(t.power.toUpperCase(),t.x,t.y-30);} }
+    function burst(x,y,color,count){ for(let i=0;i<count;i++){ const a=Math.random()*Math.PI*2,s=1+Math.random()*3.5; sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:360,max:360,r:1.5+Math.random()*2,color}); } }
+    function updateSparks(dt){ for(let i=sparks.length-1;i>=0;i--){ const p=sparks[i]; p.life-=dt; p.x+=p.vx*dt*.05; p.y+=p.vy*dt*.05; if(p.life<=0) sparks.splice(i,1); } }
+    function drawSparks(){ sparks.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}); ctx.globalAlpha=1; }
+    function hit(b,t){ return b.owner!==t.id && Math.hypot(b.x-t.x,b.y-t.y)<b.r+t.r+(t.shield?12:0); }
+    function circleRect(cx,cy,cr,r){ const x=clamp(cx,r.x,r.x+r.w),y=clamp(cy,r.y,r.y+r.h); return (cx-x)**2+(cy-y)**2<cr**2; }
+    function angleDiff(a,b){ return Math.atan2(Math.sin(b-a),Math.cos(b-a)); }
+    function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+    function updateHud(){ p1ScoreEl.textContent=t1?t1.score:0; p2ScoreEl.textContent=t2?t2.score:0; }
+    function primeAudio(){ if(!audioCtx) audioCtx=new (AudioContext||webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); }
+    function beep(freq,time){ if(!soundOn||!audioCtx) return; const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type="square"; o.frequency.value=freq; g.gain.value=.035; g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+time); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+time); }
+    t1 = tank("p1",82,H/2,0,"#ff4fa3"," "); t2 = tank("p2",W-82,H/2,Math.PI,"#27d9ff","Enter"); updateHud(); draw(performance.now());
+  </script>
+</body>
+</html>

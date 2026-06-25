@@ -194,6 +194,41 @@ h1 {
   margin-top: 30px;
 }
 
+.visitor-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 12px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 14px 32px rgba(31, 45, 92, 0.12);
+  color: #4c5878;
+  font-weight: 900;
+  backdrop-filter: blur(14px);
+}
+
+.visitor-counter strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.visitor-icon {
+  display: grid;
+  place-items: center;
+  min-width: 54px;
+  min-height: 54px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--green));
+  font-size: 0.72rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
 .primary-action,
 .secondary-action,
 .install-action,
@@ -466,6 +501,9 @@ h1 {
 .game-art.boba { background: linear-gradient(135deg, #ff8ed0, #6df0d5); }
 .game-art.fireworks { background: linear-gradient(135deg, #16164f, #8458ff, #ff5ea8); }
 .game-art.airport { background: linear-gradient(135deg, #8ee7ff, #5ad67d, #ffd166); }
+.game-art.tank { background: linear-gradient(135deg, #24324f, #ffcf5c 48%, #ff5ea8); }
+.game-art.hockey { background: linear-gradient(135deg, #07162b, #00d4ff 52%, #ff4fa3); }
+.game-art.balloon { background: linear-gradient(135deg, #ff5ea8, #ffd166 48%, #5ad67d); }
 
 .game-content {
   padding: 22px;

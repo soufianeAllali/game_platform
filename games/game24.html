@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Balloon Pop Festival - WonderPlay</title>
+  <meta name="description" content="Play Balloon Pop Festival, a responsive HTML5 arcade game where you pop colorful balloons, build combos, pause, restart, and chase a high score.">
+  <meta property="og:type" content="game">
+  <meta property="og:title" content="Balloon Pop Festival">
+  <meta property="og:description" content="Pop balloons before they escape in this polished browser arcade game.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Balloon Pop Festival">
+  <meta name="twitter:description" content="A cheerful responsive balloon popping game for WonderPlay.">
+  <style>
+    :root { --bg: #111827; --panel: rgba(255,255,255,.88); --ink: #172033; --muted: #647086; --pink: #ff4fa3; --blue: #25b7ff; --green: #56d67b; --gold: #ffd166; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 16px; color: var(--ink); font-family: Inter, "Segoe UI", Arial, sans-serif; background: radial-gradient(circle at 18% 10%, rgba(255,209,102,.55), transparent 24%), radial-gradient(circle at 82% 12%, rgba(37,183,255,.34), transparent 28%), linear-gradient(145deg, #fff6cf, #ffd9ec 48%, #daf6ff); overflow-x: hidden; }
+    main { width: min(1120px, 100%); display: grid; grid-template-columns: minmax(280px, 360px) minmax(300px, 1fr); gap: 18px; align-items: center; }
+    .side, .stage { border: 2px solid rgba(255,255,255,.85); border-radius: 18px; background: var(--panel); box-shadow: 0 24px 70px rgba(31,45,92,.16); backdrop-filter: blur(18px); }
+    .side { padding: 22px; }
+    a { color: inherit; text-decoration: none; }
+    .back { display: inline-flex; margin-bottom: 18px; color: var(--muted); font-weight: 900; }
+    h1 { margin: 0; font-size: clamp(2.05rem, 6vw, 4.4rem); line-height: .92; letter-spacing: 0; }
+    .lead, .instructions { color: var(--muted); line-height: 1.6; font-weight: 700; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+    .stat { padding: 12px; border-radius: 12px; background: rgba(23,32,51,.07); }
+    .stat span { display: block; color: var(--muted); font-size: .75rem; font-weight: 900; text-transform: uppercase; }
+    .stat strong { font-size: 1.45rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+    button { min-height: 44px; border: 0; border-radius: 12px; padding: 10px 14px; color: white; background: linear-gradient(135deg, var(--pink), #7c5cff); font: inherit; font-weight: 950; cursor: pointer; box-shadow: 0 12px 24px rgba(255,79,163,.2); }
+    button.secondary { color: var(--ink); background: white; border: 1px solid rgba(23,32,51,.12); box-shadow: none; }
+    .stage { position: relative; padding: 12px; }
+    canvas { width: 100%; aspect-ratio: 5 / 6; max-height: calc(100dvh - 32px); display: block; border-radius: 14px; background: linear-gradient(#9ee8ff, #f7fcff 55%, #ddf8e4); touch-action: none; cursor: crosshair; }
+    .overlay { position: absolute; inset: 12px; display: grid; place-items: center; padding: 22px; text-align: center; border-radius: 14px; background: rgba(255,255,255,.86); }
+    .overlay.hidden { display: none; }
+    .overlay h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 3rem); }
+    .overlay p { max-width: 480px; margin: 0 0 18px; color: var(--muted); line-height: 1.55; font-weight: 700; }
+    @media (max-width: 860px) { body { place-items: start center; } main { grid-template-columns: 1fr; } .side { order: 2; } .stage { order: 1; } canvas { max-height: 70dvh; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="side" aria-labelledby="game-title">
+      <a class="back" href="../index.html">Back to games</a>
+      <h1 id="game-title">Balloon Pop Festival</h1>
+      <p class="lead">Pop balloons before they leave the sky. Build streaks for bonus points and survive as the festival gets faster.</p>
+      <div class="stats" aria-label="Game statistics">
+        <div class="stat"><span>Score</span><strong id="scoreEl">0</strong></div>
+        <div class="stat"><span>Lives</span><strong id="livesEl">5</strong></div>
+        <div class="stat"><span>Best</span><strong id="bestEl">0</strong></div>
+      </div>
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="pauseBtn" class="secondary" type="button">Pause</button>
+        <button id="restartBtn" class="secondary" type="button">Restart</button>
+        <button id="soundBtn" class="secondary" type="button" aria-pressed="true">Sound On</button>
+      </div>
+      <p class="instructions">Click or tap a balloon to pop it. Golden balloons are worth more, heart balloons restore a life, and clean streaks multiply your score.</p>
+    </section>
+    <section class="stage" aria-label="Balloon popping game area">
+      <canvas id="gameCanvas" width="500" height="600"></canvas>
+      <div id="overlay" class="overlay">
+        <div>
+          <h2 id="overlayTitle">Ready to pop?</h2>
+          <p id="overlayText">Tap balloons before they float away. Five escapes end the game.</p>
+          <button id="overlayBtn" type="button">Play Festival</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const canvas = document.querySelector("#gameCanvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const scoreEl = document.querySelector("#scoreEl");
+    const livesEl = document.querySelector("#livesEl");
+    const bestEl = document.querySelector("#bestEl");
+    const overlay = document.querySelector("#overlay");
+    const overlayTitle = document.querySelector("#overlayTitle");
+    const overlayText = document.querySelector("#overlayText");
+    const overlayBtn = document.querySelector("#overlayBtn");
+    const startBtn = document.querySelector("#startBtn");
+    const pauseBtn = document.querySelector("#pauseBtn");
+    const restartBtn = document.querySelector("#restartBtn");
+    const soundBtn = document.querySelector("#soundBtn");
+    const W = canvas.width, H = canvas.height;
+    const palette = ["#ff4fa3", "#25b7ff", "#ffd166", "#56d67b", "#8c6cff", "#ff884d"];
+    let balloons = [], bits = [], score = 0, lives = 5, streak = 0, spawn = 0, elapsed = 0, last = 0, running = false, paused = false, soundOn = true, audioCtx;
+    let best = Number(localStorage.getItem("balloonPopBest") || 0);
+    bestEl.textContent = best;
+    [startBtn, overlayBtn].forEach(btn => btn.addEventListener("click", startGame));
+    restartBtn.addEventListener("click", startGame);
+    pauseBtn.addEventListener("click", togglePause);
+    soundBtn.addEventListener("click", () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? "Sound On" : "Sound Off"; soundBtn.setAttribute("aria-pressed", String(soundOn)); });
+    canvas.addEventListener("pointerdown", popAt, { passive: false });
+    addEventListener("keydown", e => { if (e.key.toLowerCase() === "p") togglePause(); });
+    function startGame() { primeAudio(); balloons = []; bits = []; score = 0; lives = 5; streak = 0; elapsed = 0; spawn = 0; running = true; paused = false; last = performance.now(); overlay.classList.add("hidden"); updateHud(); requestAnimationFrame(loop); }
+    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; overlayTitle.textContent = "Paused"; overlayText.textContent = "The balloons will wait right here."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
+    function loop(now) { if (!running || paused) return; const dt = Math.min(34, now - last); last = now; elapsed += dt; spawn -= dt; if (spawn <= 0) { addBalloon(); spawn = Math.max(360, 960 - elapsed * .035); } update(dt); draw(now); requestAnimationFrame(loop); }
+    function addBalloon() { const rx = 18 + Math.random() * 18, specialRoll = Math.random(); balloons.push({ x: rx + Math.random() * (W - rx * 2), y: H + 70, rx, ry: rx * 1.25, vy: 1.25 + Math.random() * 1.6 + elapsed / 70000, sway: 8 + Math.random() * 22, phase: Math.random() * 7, color: specialRoll > .92 ? "#ffd166" : specialRoll < .08 ? "#56d67b" : palette[Math.floor(Math.random() * palette.length)], kind: specialRoll > .92 ? "gold" : specialRoll < .08 ? "heart" : "normal" }); }
+    function update(dt) { for (let i = balloons.length - 1; i >= 0; i--) { const b = balloons[i]; b.y -= b.vy * dt / 16.67; b.phase += dt * .002; b.cx = b.x + Math.sin(b.phase) * b.sway; if (b.y + b.ry < -18) { balloons.splice(i, 1); lives--; streak = 0; beep(130, .08); if (lives <= 0) return endGame(); } } for (let i = bits.length - 1; i >= 0; i--) { const p = bits[i]; p.life -= dt; p.vy += .012 * dt; p.x += p.vx * dt / 16.67; p.y += p.vy * dt / 16.67; if (p.life <= 0) bits.splice(i, 1); } updateHud(); }
+    function popAt(e) { if (!running || paused) return; e.preventDefault(); const r = canvas.getBoundingClientRect(); const x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height; for (let i = balloons.length - 1; i >= 0; i--) { const b = balloons[i], cx = b.cx || b.x; if (((x - cx) / b.rx) ** 2 + ((y - b.y) / b.ry) ** 2 > 1) continue; balloons.splice(i, 1); streak++; const base = b.kind === "gold" ? 40 : 10; score += base + Math.min(50, streak * 2); if (b.kind === "heart") lives = Math.min(5, lives + 1); burst(cx, b.y, b.color); beep(b.kind === "gold" ? 680 : 520, .045); updateHud(); break; } }
+    function burst(x, y, color) { for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 4; bits.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: 2 + Math.random() * 3, color, life: 420 + Math.random() * 220, max: 640 }); } }
+    function draw(now) { const sky = ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#9ee8ff"); sky.addColorStop(.62,"#f7fcff"); sky.addColorStop(1,"#ddf8e4"); ctx.fillStyle = sky; ctx.fillRect(0,0,W,H); drawClouds(now); balloons.forEach(drawBalloon); drawBits(); ctx.fillStyle = "rgba(23,32,51,.78)"; ctx.font = "900 18px Segoe UI, sans-serif"; ctx.fillText(`Streak x${Math.max(1, streak)}`, 20, 34); }
+    function drawClouds(now) { ctx.fillStyle = "rgba(255,255,255,.58)"; for (let i = 0; i < 5; i++) { const x = (i * 130 + now * .012) % (W + 120) - 70, y = 62 + i * 54; ctx.beginPath(); ctx.ellipse(x, y, 42, 15, 0, 0, Math.PI * 2); ctx.ellipse(x + 30, y + 5, 34, 13, 0, 0, Math.PI * 2); ctx.fill(); } }
+    function drawBalloon(b) { const x = b.cx || b.x; ctx.save(); ctx.translate(x, b.y); ctx.beginPath(); ctx.moveTo(0, b.ry); ctx.bezierCurveTo(-8, b.ry + 20, 8, b.ry + 30, 0, b.ry + 48); ctx.strokeStyle = "rgba(23,32,51,.24)"; ctx.lineWidth = 1.5; ctx.stroke(); const g = ctx.createRadialGradient(-b.rx*.35,-b.ry*.45,3,0,0,b.ry); g.addColorStop(0,"#fff"); g.addColorStop(.22,b.color); g.addColorStop(1,b.color); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0,0,b.rx,b.ry,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle = b.kind === "heart" ? "#fff" : "rgba(255,255,255,.72)"; ctx.font = "900 17px Segoe UI, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; if (b.kind !== "normal") ctx.fillText(b.kind === "heart" ? "+" : "x2", 0, 2); ctx.restore(); }
+    function drawBits() { bits.forEach(p => { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); ctx.globalAlpha = 1; }
+    function endGame() { running = false; best = Math.max(best, score); localStorage.setItem("balloonPopBest", String(best)); updateHud(); overlayTitle.textContent = "Festival finished"; overlayText.textContent = `Your final score was ${score}. Pop again to beat your best.`; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); }
+    function updateHud() { scoreEl.textContent = score; livesEl.textContent = lives; bestEl.textContent = best; }
+    function primeAudio() { if (!audioCtx) audioCtx = new (AudioContext || webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); }
+    function beep(freq, time) { if (!soundOn || !audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "sine"; o.frequency.value = freq; g.gain.value = .04; g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + time); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + time); }
+    draw(performance.now());
+  </script>
+</body>
+</html>
