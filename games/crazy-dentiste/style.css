@@ -120,7 +120,8 @@ h2 {
 }
 
 .primary-btn,
-.ghost-btn {
+.ghost-btn,
+.menu-home-link {
   position: relative;
   min-width: min(280px, 90vw);
   min-height: 58px;
@@ -128,6 +129,13 @@ h2 {
   border-radius: 22px;
   font-weight: 1000;
   transition: transform .15s ease, filter .15s ease;
+}
+
+.menu-home-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .primary-btn {
@@ -144,6 +152,7 @@ h2 {
 
 .primary-btn:active,
 .ghost-btn:active,
+.menu-home-link:active,
 .tool-btn:active { transform: translateY(4px) scale(.98); }
 
 .game-screen {

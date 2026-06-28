@@ -200,7 +200,9 @@
         const brickPadding = 10;
         const brickOffsetTop = 50;
         const brickOffsetLeft = 30;
+        const totalBricks = brickRowCount * brickColumnCount;
         let bricks = [];
+        let bricksRemaining = 0;
 
         let score = 0;
         let lives = 3;
@@ -211,6 +213,7 @@
 
         function initBricks() {
             bricks = [];
+            bricksRemaining = totalBricks;
             for (let c = 0; c < brickColumnCount; c++) {
                 bricks[c] = [];
                 for (let r = 0; r < brickRowCount; r++) {
@@ -276,14 +279,8 @@
                             dy = -dy;
                             b.status = 0;
                             score += 10;
-                            if (score === brickRowCount * brickColumnCount * 10 * level) {
-                                level++;
-                                baseSpeed += 1;
-                                overlayText.textContent = `Level ${level} is ready!`;
-                                startBtn.textContent = "Continue";
-                                isGameRunning = false;
-                                overlay.classList.remove("hidden");
-                            }
+                            bricksRemaining--;
+                            if (bricksRemaining === 0) completeLevel();
                         }
                     }
                 }
@@ -346,6 +343,43 @@
             paddleX = (canvas.width - paddleWidth) / 2;
         }
 
+        function resetGameState() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            baseSpeed = 4;
+            rightPressed = false;
+            leftPressed = false;
+            initBricks();
+            resetBallAndPaddle();
+        }
+
+        function startLevel() {
+            overlay.classList.add("hidden");
+            resetBallAndPaddle();
+            isGameRunning = true;
+            requestAnimationFrame(draw);
+        }
+
+        function completeLevel() {
+            level++;
+            baseSpeed += 1;
+            initBricks();
+            resetBallAndPaddle();
+            overlayText.textContent = `Level ${level} is ready!`;
+            startBtn.textContent = "Continue";
+            isGameRunning = false;
+            overlay.classList.remove("hidden");
+        }
+
+        function gameOver() {
+            overlayText.textContent = "Game over!";
+            startBtn.textContent = "Try Again";
+            isGameRunning = false;
+            overlay.classList.remove("hidden");
+            resetGameState();
+        }
+
         function draw() {
             if (!isGameRunning) return;
 
@@ -355,6 +389,7 @@
             drawPaddle();
             drawHUD();
             collisionDetection();
+            if (!isGameRunning) return;
 
             if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
                 dx = -dx;
@@ -371,14 +406,7 @@
                 } else if (y + dy > canvas.height - ballRadius) {
                     lives--;
                     if (!lives) {
-                        overlayText.textContent = "Game over!";
-                        startBtn.textContent = "Try Again";
-                        score = 0;
-                        level = 1;
-                        baseSpeed = 4;
-                        lives = 3;
-                        isGameRunning = false;
-                        overlay.classList.remove("hidden");
+                        gameOver();
                     } else {
                         resetBallAndPaddle();
                     }
@@ -397,13 +425,7 @@
         }
 
         startBtn.addEventListener("click", () => {
-            overlay.classList.add("hidden");
-            if (score === 0 && lives === 3) {
-                initBricks();
-            }
-            resetBallAndPaddle();
-            isGameRunning = true;
-            requestAnimationFrame(draw);
+            startLevel();
         });
 
         initBricks();
