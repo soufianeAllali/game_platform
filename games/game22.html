@@ -38,7 +38,32 @@
     .touch { display: none; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; margin-top: 12px; }
     .touch-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .touch button { padding: 8px; min-height: 42px; }
-    @media (max-width: 900px) { body { place-items: start center; } main { grid-template-columns: 1fr; } .side { order: 2; } .stage { order: 1; } canvas { max-height: 62dvh; } .touch { display: grid; } }
+    .mobile-menu-btn, .menu-panel { display: none; }
+    .menu-panel { gap: 10px; width: min(320px, 100%); }
+    .menu-panel button { width: 100%; }
+    .menu-label { color: var(--muted); font-size: .78rem; font-weight: 950; text-transform: uppercase; }
+    @media (max-width: 900px) {
+      body { place-items: start center; }
+      main { grid-template-columns: 1fr; }
+      .side { order: 2; }
+      .stage { order: 1; }
+      canvas { max-height: 62dvh; }
+      .touch { display: grid; }
+      body.is-playing { height: 100dvh; overflow: hidden; padding: 0; background: #080d18; }
+      body.is-playing main { width: 100vw; height: 100dvh; display: block; }
+      body.is-playing .side { display: none; }
+      body.is-playing main > section:not(.side) { height: 100dvh; }
+      body.is-playing .stage { height: calc(100dvh - 142px); padding: 0; border: 0; border-radius: 0; box-shadow: none; background: #0a1020; }
+      body.is-playing canvas { width: 100vw; height: 100%; max-height: none; border-radius: 0; }
+      body.is-playing .touch { position: fixed; z-index: 12; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr; gap: 12px; margin: 0; padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); border: 0; border-radius: 20px 20px 0 0; background: rgba(8, 13, 24, .92); box-shadow: 0 -18px 42px rgba(0,0,0,.34); backdrop-filter: blur(18px); }
+      body.is-playing .touch-group { gap: 12px; }
+      body.is-playing .touch button { min-height: 56px; border-radius: 16px; padding: 10px 8px; font-size: clamp(.84rem, 3.5vw, 1rem); }
+      .mobile-menu-btn { position: fixed; z-index: 15; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); min-height: 44px; padding: 10px 14px; border-radius: 999px; color: var(--text); background: rgba(8,13,24,.74); border: 1px solid var(--line); box-shadow: 0 12px 28px rgba(0,0,0,.3); backdrop-filter: blur(14px); }
+      body.is-playing .mobile-menu-btn { display: inline-flex; align-items: center; }
+      body.is-playing .overlay { z-index: 20; inset: 0; border-radius: 0; opacity: 1; transform: translateY(0); transition: opacity .22s ease, transform .22s ease; }
+      body.is-playing .overlay.hidden { display: grid; opacity: 0; pointer-events: none; transform: translateY(14px); }
+      body.is-playing .menu-panel:not([hidden]) { display: grid; }
+    }
   </style>
 </head>
 <body>
@@ -64,10 +89,19 @@
     <section>
       <div class="stage" aria-label="Tank battle game area">
         <canvas id="gameCanvas" width="700" height="500"></canvas>
+        <button id="mobileMenuBtn" class="mobile-menu-btn" type="button">Menu</button>
         <div id="overlay" class="overlay">
           <div>
             <h2 id="overlayTitle">Enter the arena</h2>
             <p id="overlayText">First tank to 3 points wins. Bullets bounce, power-ups shift momentum, and shields block one hit.</p>
+            <div id="menuPanel" class="menu-panel" hidden>
+              <button id="menuResumeBtn" type="button">Resume</button>
+              <button id="menuRestartBtn" class="secondary" type="button">Restart</button>
+              <span class="menu-label">Settings</span>
+              <button id="menuSoundBtn" class="secondary" type="button">Sound On</button>
+              <button id="menuBotBtn" class="secondary" type="button">Bot On</button>
+              <button id="menuExitBtn" class="secondary" type="button">Exit Game</button>
+            </div>
             <button id="overlayBtn" type="button">Start Battle</button>
           </div>
         </div>
@@ -96,6 +130,13 @@
     const restartBtn = document.querySelector("#restartBtn");
     const botBtn = document.querySelector("#botBtn");
     const soundBtn = document.querySelector("#soundBtn");
+    const mobileMenuBtn = document.querySelector("#mobileMenuBtn");
+    const menuPanel = document.querySelector("#menuPanel");
+    const menuResumeBtn = document.querySelector("#menuResumeBtn");
+    const menuRestartBtn = document.querySelector("#menuRestartBtn");
+    const menuSoundBtn = document.querySelector("#menuSoundBtn");
+    const menuBotBtn = document.querySelector("#menuBotBtn");
+    const menuExitBtn = document.querySelector("#menuExitBtn");
     const W = canvas.width, H = canvas.height, TARGET = 3;
     const keys = {};
     const walls = [{x:205,y:145,w:42,h:210},{x:453,y:145,w:42,h:210},{x:315,y:72,w:70,h:38},{x:315,y:390,w:70,h:38}];
@@ -107,11 +148,23 @@
     [startBtn, overlayBtn].forEach(btn => btn.addEventListener("click", () => paused ? togglePause() : startGame()));
     restartBtn.addEventListener("click", startGame);
     pauseBtn.addEventListener("click", togglePause);
-    botBtn.addEventListener("click", () => { bot = !bot; botBtn.textContent = bot ? "Bot On" : "Bot Off"; botBtn.setAttribute("aria-pressed", String(bot)); });
-    soundBtn.addEventListener("click", () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? "Sound On" : "Sound Off"; soundBtn.setAttribute("aria-pressed", String(soundOn)); });
+    botBtn.addEventListener("click", toggleBot);
+    soundBtn.addEventListener("click", toggleSound);
+    mobileMenuBtn.addEventListener("click", openMobileMenu);
+    menuResumeBtn.addEventListener("click", resumeFromMenu);
+    menuRestartBtn.addEventListener("click", startGame);
+    menuSoundBtn.addEventListener("click", toggleSound);
+    menuBotBtn.addEventListener("click", toggleBot);
+    menuExitBtn.addEventListener("click", exitGame);
     function tank(id,x,y,a,color,key){ return {id,x,y,a,color,key,r:18,score:0,ammo:5,lastShot:0,shield:false,shieldReady:true,power:null,powerUntil:0,move:false}; }
-    function startGame(){ primeAudio(); t1 = tank("p1",82,H/2,0,"#ff4fa3"," "); t2 = tank("p2",W-82,H/2,Math.PI,"#27d9ff","Enter"); bullets=[]; sparks=[]; powers=[]; powerTimer=1800; running=true; paused=false; last=performance.now(); overlay.classList.add("hidden"); updateHud(); requestAnimationFrame(loop); }
-    function togglePause(){ if(!running) return; paused=!paused; pauseBtn.textContent=paused?"Resume":"Pause"; overlayTitle.textContent="Paused"; overlayText.textContent="The arena is frozen until you resume."; overlayBtn.textContent="Resume"; overlay.classList.toggle("hidden",!paused); if(!paused){ last=performance.now(); requestAnimationFrame(loop); } }
+    function startGame(){ primeAudio(); t1 = tank("p1",82,H/2,0,"#ff4fa3"," "); t2 = tank("p2",W-82,H/2,Math.PI,"#27d9ff","Enter"); bullets=[]; sparks=[]; powers=[]; powerTimer=1800; running=true; paused=false; document.body.classList.add("is-playing"); closeMenuPanel(); last=performance.now(); overlay.classList.add("hidden"); updateHud(); requestAnimationFrame(loop); }
+    function togglePause(){ if(!running) return; paused=!paused; pauseBtn.textContent=paused?"Resume":"Pause"; closeMenuPanel(); overlayBtn.hidden=false; overlayTitle.textContent="Paused"; overlayText.textContent="The arena is frozen until you resume."; overlayBtn.textContent="Resume"; overlay.classList.toggle("hidden",!paused); if(!paused){ last=performance.now(); requestAnimationFrame(loop); } }
+    function openMobileMenu(){ if(!running) return; paused=true; pauseBtn.textContent="Resume"; overlayTitle.textContent="Paused"; overlayText.textContent=""; overlayBtn.hidden=true; menuPanel.hidden=false; overlay.classList.remove("hidden"); }
+    function resumeFromMenu(){ if(!running) return; paused=false; pauseBtn.textContent="Pause"; closeMenuPanel(); overlay.classList.add("hidden"); last=performance.now(); requestAnimationFrame(loop); }
+    function closeMenuPanel(){ menuPanel.hidden=true; overlayBtn.hidden=false; }
+    function exitGame(){ window.location.href="../index.html"; }
+    function toggleSound(){ soundOn = !soundOn; const text = soundOn ? "Sound On" : "Sound Off"; soundBtn.textContent = text; menuSoundBtn.textContent = text; soundBtn.setAttribute("aria-pressed", String(soundOn)); menuSoundBtn.setAttribute("aria-pressed", String(soundOn)); }
+    function toggleBot(){ bot = !bot; const text = bot ? "Bot On" : "Bot Off"; botBtn.textContent = text; menuBotBtn.textContent = text; botBtn.setAttribute("aria-pressed", String(bot)); menuBotBtn.setAttribute("aria-pressed", String(bot)); }
     function loop(now){ if(!running||paused) return; const dt=Math.min(32,now-last); last=now; update(dt,now); draw(now); requestAnimationFrame(loop); }
     function update(dt,now){ powerTimer-=dt; if(powerTimer<=0){ spawnPower(); powerTimer=7600; } updateTank(t1,dt,now,false); if(bot) updateBot(now); updateTank(t2,dt,now,bot); updateBullets(dt,now); updateSparks(dt); collect(t1,now); collect(t2,now); powers=powers.filter(p=>p.until>now); shake=Math.max(0,shake-dt*.02); }
     function updateTank(t,dt,now,controlled){ if(t.power&&now>t.powerUntil)t.power=null; const moving = controlled ? t.move : keys[t.key]; if(moving){ const speed=(t.power==="speed"? .23:.16)*dt; move(t,Math.cos(t.a)*speed,Math.sin(t.a)*speed); } else t.a += .0024*dt; }
@@ -120,7 +173,7 @@
     function fire(t){ if(!running||!t) return; const now=performance.now(); if(now-t.lastShot<260) return; const spreads=t.power==="triple"?[-.24,0,.24]:[0]; spreads.forEach(s=>bullets.push({owner:t.id,x:t.x+Math.cos(t.a+s)*28,y:t.y+Math.sin(t.a+s)*28,vx:Math.cos(t.a+s)*(t.power==="mega"?.5:.38),vy:Math.sin(t.a+s)*(t.power==="mega"?.5:.38),r:t.power==="mega"?7:4,color:t.power==="mega"?"#ffd166":t.color,bounce:t.power==="mega"?5:3})); t.lastShot=now; burst(t.x+Math.cos(t.a)*30,t.y+Math.sin(t.a)*30,t.color,6); beep(320,.04); }
     function shield(t){ if(!running||!t||!t.shieldReady) return; t.shield=true; t.shieldReady=false; burst(t.x,t.y,"#9fffee",14); beep(620,.06); setTimeout(()=>{ if(t) t.shield=false; },2600); setTimeout(()=>{ if(t) t.shieldReady=true; },5200); }
     function updateBullets(dt){ for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; sparks.push({x:b.x,y:b.y,vx:-b.vx*10,vy:-b.vy*10,life:180,max:180,r:1.6,color:b.color}); if(b.x<b.r||b.x>W-b.r){ b.x=clamp(b.x,b.r,W-b.r); b.vx*=-1; b.bounce--; } if(b.y<b.r||b.y>H-b.r){ b.y=clamp(b.y,b.r,H-b.r); b.vy*=-1; b.bounce--; } for(const w of walls){ if(circleRect(b.x,b.y,b.r,w)){ const side=Math.min(Math.abs(b.x-w.x),Math.abs(b.x-w.x-w.w)); if(side<Math.min(Math.abs(b.y-w.y),Math.abs(b.y-w.y-w.h))) b.vx*=-1; else b.vy*=-1; b.bounce--; break; } } if(hit(b,t1)){ bullets.splice(i,1); point(t2,t1,b); continue; } if(hit(b,t2)){ bullets.splice(i,1); point(t1,t2,b); continue; } if(b.bounce<0) bullets.splice(i,1); } if(bullets.length>60) bullets.splice(0,bullets.length-60); }
-    function point(winner,victim,b){ burst(victim.x,victim.y,b.color,22); shake=7; beep(120,.1); if(victim.shield){ victim.shield=false; return; } winner.score++; updateHud(); if(winner.score>=TARGET){ running=false; overlayTitle.textContent=`${winner===t1?"Pink":"Blue"} wins!`; overlayText.textContent="Restart for another ricochet battle."; overlayBtn.textContent="Play Again"; overlay.classList.remove("hidden"); return; } const s1=t1.score,s2=t2.score; startRound(); t1.score=s1; t2.score=s2; updateHud(); }
+    function point(winner,victim,b){ burst(victim.x,victim.y,b.color,22); shake=7; beep(120,.1); if(victim.shield){ victim.shield=false; return; } winner.score++; updateHud(); if(winner.score>=TARGET){ running=false; document.body.classList.remove("is-playing"); closeMenuPanel(); overlayTitle.textContent=`${winner===t1?"Pink":"Blue"} wins!`; overlayText.textContent="Restart for another ricochet battle."; overlayBtn.textContent="Play Again"; overlay.classList.remove("hidden"); return; } const s1=t1.score,s2=t2.score; startRound(); t1.score=s1; t2.score=s2; updateHud(); }
     function startRound(){ t1.x=82;t1.y=H/2;t1.a=0;t1.power=null;t2.x=W-82;t2.y=H/2;t2.a=Math.PI;t2.power=null;bullets=[];powers=[]; }
     function spawnPower(){ const def=powerTypes[Math.floor(Math.random()*powerTypes.length)]; let p; for(let i=0;i<25;i++){ p={...def,x:80+Math.random()*(W-160),y:70+Math.random()*(H-140),r:16,until:performance.now()+10000}; if(!walls.some(w=>circleRect(p.x,p.y,p.r,w))) break; } powers.push(p); }
     function collect(t,now){ for(let i=powers.length-1;i>=0;i--){ const p=powers[i]; if(Math.hypot(t.x-p.x,t.y-p.y)>t.r+p.r) continue; powers.splice(i,1); t.power=p.kind; t.powerUntil=now+6500; burst(p.x,p.y,p.color,18); beep(760,.05); } }

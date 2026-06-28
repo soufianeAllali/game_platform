@@ -37,7 +37,27 @@
     .overlay.hidden { display: none; }
     .overlay h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 3rem); }
     .overlay p { max-width: 480px; margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
-    @media (max-width: 860px) { body { place-items: start center; } main { grid-template-columns: 1fr; } .side { order: 2; } .stage { order: 1; } canvas { max-height: 70dvh; } }
+    .mobile-menu-btn, .menu-panel { display: none; }
+    .menu-panel { gap: 10px; width: min(320px, 100%); }
+    .menu-panel button { width: 100%; }
+    .menu-label { color: var(--muted); font-size: .78rem; font-weight: 950; text-transform: uppercase; }
+    @media (max-width: 860px) {
+      body { place-items: start center; }
+      main { grid-template-columns: 1fr; }
+      .side { order: 2; }
+      .stage { order: 1; }
+      canvas { max-height: 70dvh; }
+      body.is-playing { width: 100vw; height: 100dvh; overflow: hidden; padding: 0; background: #07111f; }
+      body.is-playing main { width: 100vw; height: 100dvh; display: block; }
+      body.is-playing .side { display: none; }
+      body.is-playing .stage { width: 100vw; height: 100dvh; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: #07111f; }
+      body.is-playing canvas { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; }
+      .mobile-menu-btn { position: fixed; z-index: 15; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); min-height: 44px; padding: 10px 14px; border-radius: 999px; color: var(--text); background: rgba(7,17,31,.74); border: 1px solid var(--line); box-shadow: 0 12px 28px rgba(0,0,0,.3); backdrop-filter: blur(14px); }
+      body.is-playing .mobile-menu-btn { display: inline-flex; align-items: center; }
+      body.is-playing .overlay { z-index: 20; inset: 0; border-radius: 0; opacity: 1; transform: translateY(0); transition: opacity .22s ease, transform .22s ease; }
+      body.is-playing .overlay.hidden { display: grid; opacity: 0; pointer-events: none; transform: translateY(14px); }
+      body.is-playing .menu-panel:not([hidden]) { display: grid; }
+    }
   </style>
 </head>
 <body>
@@ -61,10 +81,18 @@
     </section>
     <section class="stage" aria-label="Neon air hockey game area">
       <canvas id="gameCanvas" width="450" height="600"></canvas>
+      <button id="mobileMenuBtn" class="mobile-menu-btn" type="button">Menu</button>
       <div id="overlay" class="overlay">
         <div>
           <h2 id="overlayTitle">Ready for the face-off?</h2>
           <p id="overlayText">Use keyboard or touch controls. The first player to 7 points wins.</p>
+          <div id="menuPanel" class="menu-panel" hidden>
+            <button id="menuResumeBtn" type="button">Resume</button>
+            <button id="menuRestartBtn" class="secondary" type="button">Restart</button>
+            <span class="menu-label">Settings</span>
+            <button id="menuSoundBtn" class="secondary" type="button">Sound On</button>
+            <button id="menuExitBtn" class="secondary" type="button">Exit Game</button>
+          </div>
           <button id="overlayBtn" type="button">Play Match</button>
         </div>
       </div>
@@ -83,6 +111,12 @@
     const restartBtn = document.querySelector("#restartBtn");
     const soundBtn = document.querySelector("#soundBtn");
     const overlayBtn = document.querySelector("#overlayBtn");
+    const mobileMenuBtn = document.querySelector("#mobileMenuBtn");
+    const menuPanel = document.querySelector("#menuPanel");
+    const menuResumeBtn = document.querySelector("#menuResumeBtn");
+    const menuRestartBtn = document.querySelector("#menuRestartBtn");
+    const menuSoundBtn = document.querySelector("#menuSoundBtn");
+    const menuExitBtn = document.querySelector("#menuExitBtn");
     const W = canvas.width, H = canvas.height, GOAL = 150, TARGET = 7;
     const keys = new Set();
     let audioCtx, soundOn = true, running = false, paused = false, last = 0, hitFlash = 0;
@@ -95,18 +129,29 @@
     canvas.addEventListener("pointermove", handlePointer, { passive: false });
     canvas.addEventListener("pointerup", releasePointer);
     canvas.addEventListener("pointercancel", releasePointer);
-    [startBtn, overlayBtn].forEach(btn => btn.addEventListener("click", startGame));
+    startBtn.addEventListener("click", startGame);
+    overlayBtn.addEventListener("click", () => paused ? togglePause() : startGame());
     restartBtn.addEventListener("click", startGame);
     pauseBtn.addEventListener("click", togglePause);
-    soundBtn.addEventListener("click", () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? "Sound On" : "Sound Off"; soundBtn.setAttribute("aria-pressed", String(soundOn)); });
-    function startGame() { primeAudio(); Object.assign(p1, { x: W / 2, y: 120, score: 0 }); Object.assign(p2, { x: W / 2, y: 480, score: 0 }); resetPuck(Math.random() > .5 ? 1 : -1); running = true; paused = false; last = performance.now(); overlay.classList.add("hidden"); updateScore(); requestAnimationFrame(loop); }
-    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; overlayTitle.textContent = "Paused"; overlayText.textContent = "Take a breath, then resume the match."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
+    soundBtn.addEventListener("click", toggleSound);
+    mobileMenuBtn.addEventListener("click", openMobileMenu);
+    menuResumeBtn.addEventListener("click", resumeFromMenu);
+    menuRestartBtn.addEventListener("click", startGame);
+    menuSoundBtn.addEventListener("click", toggleSound);
+    menuExitBtn.addEventListener("click", exitGame);
+    function startGame() { primeAudio(); Object.assign(p1, { x: W / 2, y: 120, score: 0 }); Object.assign(p2, { x: W / 2, y: 480, score: 0 }); resetPuck(Math.random() > .5 ? 1 : -1); running = true; paused = false; document.body.classList.add("is-playing"); closeMenuPanel(); last = performance.now(); overlay.classList.add("hidden"); updateScore(); requestAnimationFrame(loop); }
+    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; closeMenuPanel(); overlayBtn.hidden = false; overlayTitle.textContent = "Paused"; overlayText.textContent = "Take a breath, then resume the match."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
+    function openMobileMenu() { if (!running) return; paused = true; pauseBtn.textContent = "Resume"; overlayTitle.textContent = "Paused"; overlayText.textContent = ""; overlayBtn.hidden = true; menuPanel.hidden = false; overlay.classList.remove("hidden"); }
+    function resumeFromMenu() { if (!running) return; paused = false; pauseBtn.textContent = "Pause"; closeMenuPanel(); overlay.classList.add("hidden"); last = performance.now(); requestAnimationFrame(loop); }
+    function closeMenuPanel() { menuPanel.hidden = true; overlayBtn.hidden = false; }
+    function exitGame() { window.location.href = "../index.html"; }
+    function toggleSound() { soundOn = !soundOn; const text = soundOn ? "Sound On" : "Sound Off"; soundBtn.textContent = text; menuSoundBtn.textContent = text; soundBtn.setAttribute("aria-pressed", String(soundOn)); menuSoundBtn.setAttribute("aria-pressed", String(soundOn)); }
     function loop(now) { if (!running || paused) return; const dt = Math.min(32, now - last) / 16.67; last = now; update(dt); draw(now); requestAnimationFrame(loop); }
     function update(dt) { movePlayer(p1, dt, "w", "s", "a", "d", 0, H / 2); movePlayer(p2, dt, "arrowup", "arrowdown", "arrowleft", "arrowright", H / 2, H); puck.x += puck.vx * dt; puck.y += puck.vy * dt; puck.vx *= .996; puck.vy *= .996; wallBounce(); collide(p1); collide(p2); hitFlash = Math.max(0, hitFlash - dt * .08); }
     function movePlayer(p, dt, up, down, left, right, minY, maxY) { const oldX = p.x, oldY = p.y, speed = 6.8 * dt; if (p.touch) { p.x += (p.touch.x - p.x) * .32; p.y += (p.touch.y - p.y) * .32; } else { if (keys.has(up)) p.y -= speed; if (keys.has(down)) p.y += speed; if (keys.has(left)) p.x -= speed; if (keys.has(right)) p.x += speed; } p.x = clamp(p.x, p.r, W - p.r); p.y = clamp(p.y, minY + p.r, maxY - p.r); p.vx = p.x - oldX; p.vy = p.y - oldY; }
     function wallBounce() { if (puck.x < puck.r || puck.x > W - puck.r) { puck.x = clamp(puck.x, puck.r, W - puck.r); puck.vx *= -1; beep(220, .04); } const inGoal = puck.x > (W - GOAL) / 2 && puck.x < (W + GOAL) / 2; if (puck.y < -puck.r && inGoal) score(p2, 1); else if (puck.y > H + puck.r && inGoal) score(p1, -1); else { if (puck.y < puck.r) { puck.y = puck.r; puck.vy *= -1; } if (puck.y > H - puck.r) { puck.y = H - puck.r; puck.vy *= -1; } } }
     function collide(p) { const dx = puck.x - p.x, dy = puck.y - p.y, dist = Math.hypot(dx, dy), min = puck.r + p.r; if (dist >= min) return; const a = Math.atan2(dy, dx), power = Math.min(puck.max, 5.2 + Math.hypot(p.vx, p.vy) * .55); puck.x = p.x + Math.cos(a) * min; puck.y = p.y + Math.sin(a) * min; puck.vx = Math.cos(a) * power + p.vx * .16; puck.vy = Math.sin(a) * power + p.vy * .16; hitFlash = 1; beep(420, .035); }
-    function score(player, dir) { player.score++; updateScore(); beep(120, .12); if (player.score >= TARGET) { running = false; overlayTitle.textContent = `${player === p1 ? "Pink" : "Blue"} wins!`; overlayText.textContent = "Great match. Restart for a fresh duel."; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); return; } resetPuck(dir); }
+    function score(player, dir) { player.score++; updateScore(); beep(120, .12); if (player.score >= TARGET) { running = false; document.body.classList.remove("is-playing"); closeMenuPanel(); overlayTitle.textContent = `${player === p1 ? "Pink" : "Blue"} wins!`; overlayText.textContent = "Great match. Restart for a fresh duel."; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); return; } resetPuck(dir); }
     function resetPuck(dir) { puck.x = W / 2; puck.y = H / 2; puck.vx = (Math.random() - .5) * 2; puck.vy = 3.9 * dir; }
     function draw(now) { ctx.fillStyle = "#07111f"; ctx.fillRect(0,0,W,H); drawField(now); drawScoreGhost(); drawDisc(p1); drawDisc(p2); drawPuck(); }
     function drawField(now) { ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke(); ctx.beginPath(); ctx.arc(W/2,H/2,62,0,Math.PI*2); ctx.stroke(); ctx.fillStyle = p1.color; ctx.fillRect((W-GOAL)/2,0,GOAL,7); ctx.fillStyle = p2.color; ctx.fillRect((W-GOAL)/2,H-7,GOAL,7); for (let y = 34; y < H; y += 46) { ctx.fillStyle = `rgba(255,255,255,${.025 + Math.sin(now * .002 + y) * .015})`; ctx.fillRect(24,y,W-48,1); } }

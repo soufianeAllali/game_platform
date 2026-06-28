@@ -35,7 +35,27 @@
     .overlay.hidden { display: none; }
     .overlay h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 3rem); }
     .overlay p { max-width: 480px; margin: 0 0 18px; color: var(--muted); line-height: 1.55; font-weight: 700; }
-    @media (max-width: 860px) { body { place-items: start center; } main { grid-template-columns: 1fr; } .side { order: 2; } .stage { order: 1; } canvas { max-height: 70dvh; } }
+    .mobile-menu-btn, .menu-panel { display: none; }
+    .menu-panel { gap: 10px; width: min(320px, 100%); }
+    .menu-panel button { width: 100%; }
+    .menu-label { color: var(--muted); font-size: .78rem; font-weight: 950; text-transform: uppercase; }
+    @media (max-width: 860px) {
+      body { place-items: start center; }
+      main { grid-template-columns: 1fr; }
+      .side { order: 2; }
+      .stage { order: 1; }
+      canvas { max-height: 70dvh; }
+      body.is-playing { width: 100vw; height: 100dvh; overflow: hidden; padding: 0; background: #9ee8ff; }
+      body.is-playing main { width: 100vw; height: 100dvh; display: block; }
+      body.is-playing .side { display: none; }
+      body.is-playing .stage { width: 100vw; height: 100dvh; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: #9ee8ff; }
+      body.is-playing canvas { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; }
+      .mobile-menu-btn { position: fixed; z-index: 15; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); min-height: 44px; padding: 10px 14px; border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.78); border: 1px solid rgba(23,32,51,.14); box-shadow: 0 12px 28px rgba(31,45,92,.22); backdrop-filter: blur(14px); }
+      body.is-playing .mobile-menu-btn { display: inline-flex; align-items: center; }
+      body.is-playing .overlay { z-index: 20; inset: 0; border-radius: 0; opacity: 1; transform: translateY(0); transition: opacity .22s ease, transform .22s ease; }
+      body.is-playing .overlay.hidden { display: grid; opacity: 0; pointer-events: none; transform: translateY(14px); }
+      body.is-playing .menu-panel:not([hidden]) { display: grid; }
+    }
   </style>
 </head>
 <body>
@@ -59,10 +79,18 @@
     </section>
     <section class="stage" aria-label="Balloon popping game area">
       <canvas id="gameCanvas" width="500" height="600"></canvas>
+      <button id="mobileMenuBtn" class="mobile-menu-btn" type="button">Menu</button>
       <div id="overlay" class="overlay">
         <div>
           <h2 id="overlayTitle">Ready to pop?</h2>
           <p id="overlayText">Tap balloons before they float away. Five escapes end the game.</p>
+          <div id="menuPanel" class="menu-panel" hidden>
+            <button id="menuResumeBtn" type="button">Resume</button>
+            <button id="menuRestartBtn" class="secondary" type="button">Restart</button>
+            <span class="menu-label">Settings</span>
+            <button id="menuSoundBtn" class="secondary" type="button">Sound On</button>
+            <button id="menuExitBtn" class="secondary" type="button">Exit Game</button>
+          </div>
           <button id="overlayBtn" type="button">Play Festival</button>
         </div>
       </div>
@@ -82,19 +110,36 @@
     const pauseBtn = document.querySelector("#pauseBtn");
     const restartBtn = document.querySelector("#restartBtn");
     const soundBtn = document.querySelector("#soundBtn");
+    const mobileMenuBtn = document.querySelector("#mobileMenuBtn");
+    const menuPanel = document.querySelector("#menuPanel");
+    const menuResumeBtn = document.querySelector("#menuResumeBtn");
+    const menuRestartBtn = document.querySelector("#menuRestartBtn");
+    const menuSoundBtn = document.querySelector("#menuSoundBtn");
+    const menuExitBtn = document.querySelector("#menuExitBtn");
     const W = canvas.width, H = canvas.height;
     const palette = ["#ff4fa3", "#25b7ff", "#ffd166", "#56d67b", "#8c6cff", "#ff884d"];
     let balloons = [], bits = [], score = 0, lives = 5, streak = 0, spawn = 0, elapsed = 0, last = 0, running = false, paused = false, soundOn = true, audioCtx;
     let best = Number(localStorage.getItem("balloonPopBest") || 0);
     bestEl.textContent = best;
-    [startBtn, overlayBtn].forEach(btn => btn.addEventListener("click", startGame));
+    startBtn.addEventListener("click", startGame);
+    overlayBtn.addEventListener("click", () => paused ? togglePause() : startGame());
     restartBtn.addEventListener("click", startGame);
     pauseBtn.addEventListener("click", togglePause);
-    soundBtn.addEventListener("click", () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? "Sound On" : "Sound Off"; soundBtn.setAttribute("aria-pressed", String(soundOn)); });
+    soundBtn.addEventListener("click", toggleSound);
+    mobileMenuBtn.addEventListener("click", openMobileMenu);
+    menuResumeBtn.addEventListener("click", resumeFromMenu);
+    menuRestartBtn.addEventListener("click", startGame);
+    menuSoundBtn.addEventListener("click", toggleSound);
+    menuExitBtn.addEventListener("click", exitGame);
     canvas.addEventListener("pointerdown", popAt, { passive: false });
     addEventListener("keydown", e => { if (e.key.toLowerCase() === "p") togglePause(); });
-    function startGame() { primeAudio(); balloons = []; bits = []; score = 0; lives = 5; streak = 0; elapsed = 0; spawn = 0; running = true; paused = false; last = performance.now(); overlay.classList.add("hidden"); updateHud(); requestAnimationFrame(loop); }
-    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; overlayTitle.textContent = "Paused"; overlayText.textContent = "The balloons will wait right here."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
+    function startGame() { primeAudio(); balloons = []; bits = []; score = 0; lives = 5; streak = 0; elapsed = 0; spawn = 0; running = true; paused = false; document.body.classList.add("is-playing"); closeMenuPanel(); last = performance.now(); overlay.classList.add("hidden"); updateHud(); requestAnimationFrame(loop); }
+    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; closeMenuPanel(); overlayBtn.hidden = false; overlayTitle.textContent = "Paused"; overlayText.textContent = "The balloons will wait right here."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
+    function openMobileMenu() { if (!running) return; paused = true; pauseBtn.textContent = "Resume"; overlayTitle.textContent = "Paused"; overlayText.textContent = ""; overlayBtn.hidden = true; menuPanel.hidden = false; overlay.classList.remove("hidden"); }
+    function resumeFromMenu() { if (!running) return; paused = false; pauseBtn.textContent = "Pause"; closeMenuPanel(); overlay.classList.add("hidden"); last = performance.now(); requestAnimationFrame(loop); }
+    function closeMenuPanel() { menuPanel.hidden = true; overlayBtn.hidden = false; }
+    function exitGame() { window.location.href = "../index.html"; }
+    function toggleSound() { soundOn = !soundOn; const text = soundOn ? "Sound On" : "Sound Off"; soundBtn.textContent = text; menuSoundBtn.textContent = text; soundBtn.setAttribute("aria-pressed", String(soundOn)); menuSoundBtn.setAttribute("aria-pressed", String(soundOn)); }
     function loop(now) { if (!running || paused) return; const dt = Math.min(34, now - last); last = now; elapsed += dt; spawn -= dt; if (spawn <= 0) { addBalloon(); spawn = Math.max(360, 960 - elapsed * .035); } update(dt); draw(now); requestAnimationFrame(loop); }
     function addBalloon() { const rx = 18 + Math.random() * 18, specialRoll = Math.random(); balloons.push({ x: rx + Math.random() * (W - rx * 2), y: H + 70, rx, ry: rx * 1.25, vy: 1.25 + Math.random() * 1.6 + elapsed / 70000, sway: 8 + Math.random() * 22, phase: Math.random() * 7, color: specialRoll > .92 ? "#ffd166" : specialRoll < .08 ? "#56d67b" : palette[Math.floor(Math.random() * palette.length)], kind: specialRoll > .92 ? "gold" : specialRoll < .08 ? "heart" : "normal" }); }
     function update(dt) { for (let i = balloons.length - 1; i >= 0; i--) { const b = balloons[i]; b.y -= b.vy * dt / 16.67; b.phase += dt * .002; b.cx = b.x + Math.sin(b.phase) * b.sway; if (b.y + b.ry < -18) { balloons.splice(i, 1); lives--; streak = 0; beep(130, .08); if (lives <= 0) return endGame(); } } for (let i = bits.length - 1; i >= 0; i--) { const p = bits[i]; p.life -= dt; p.vy += .012 * dt; p.x += p.vx * dt / 16.67; p.y += p.vy * dt / 16.67; if (p.life <= 0) bits.splice(i, 1); } updateHud(); }
@@ -104,7 +149,7 @@
     function drawClouds(now) { ctx.fillStyle = "rgba(255,255,255,.58)"; for (let i = 0; i < 5; i++) { const x = (i * 130 + now * .012) % (W + 120) - 70, y = 62 + i * 54; ctx.beginPath(); ctx.ellipse(x, y, 42, 15, 0, 0, Math.PI * 2); ctx.ellipse(x + 30, y + 5, 34, 13, 0, 0, Math.PI * 2); ctx.fill(); } }
     function drawBalloon(b) { const x = b.cx || b.x; ctx.save(); ctx.translate(x, b.y); ctx.beginPath(); ctx.moveTo(0, b.ry); ctx.bezierCurveTo(-8, b.ry + 20, 8, b.ry + 30, 0, b.ry + 48); ctx.strokeStyle = "rgba(23,32,51,.24)"; ctx.lineWidth = 1.5; ctx.stroke(); const g = ctx.createRadialGradient(-b.rx*.35,-b.ry*.45,3,0,0,b.ry); g.addColorStop(0,"#fff"); g.addColorStop(.22,b.color); g.addColorStop(1,b.color); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0,0,b.rx,b.ry,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle = b.kind === "heart" ? "#fff" : "rgba(255,255,255,.72)"; ctx.font = "900 17px Segoe UI, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; if (b.kind !== "normal") ctx.fillText(b.kind === "heart" ? "+" : "x2", 0, 2); ctx.restore(); }
     function drawBits() { bits.forEach(p => { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); ctx.globalAlpha = 1; }
-    function endGame() { running = false; best = Math.max(best, score); localStorage.setItem("balloonPopBest", String(best)); updateHud(); overlayTitle.textContent = "Festival finished"; overlayText.textContent = `Your final score was ${score}. Pop again to beat your best.`; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); }
+    function endGame() { running = false; document.body.classList.remove("is-playing"); closeMenuPanel(); best = Math.max(best, score); localStorage.setItem("balloonPopBest", String(best)); updateHud(); overlayTitle.textContent = "Festival finished"; overlayText.textContent = `Your final score was ${score}. Pop again to beat your best.`; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); }
     function updateHud() { scoreEl.textContent = score; livesEl.textContent = lives; bestEl.textContent = best; }
     function primeAudio() { if (!audioCtx) audioCtx = new (AudioContext || webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); }
     function beep(freq, time) { if (!soundOn || !audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "sine"; o.frequency.value = freq; g.gain.value = .04; g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + time); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + time); }
