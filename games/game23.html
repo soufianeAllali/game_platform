@@ -37,6 +37,7 @@
     .overlay.hidden { display: none; }
     .overlay h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 3rem); }
     .overlay p { max-width: 480px; margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
+    .overlay-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
     .mobile-menu-btn, .menu-panel { display: none; }
     .menu-panel { gap: 10px; width: min(320px, 100%); }
     .menu-panel button { width: 100%; }
@@ -65,11 +66,11 @@
     <section class="side" aria-labelledby="game-title">
       <a class="back" href="../index.html">Back to games</a>
       <h1 id="game-title">Neon Air Hockey Duel</h1>
-      <p class="lead">Defend your goal, strike clean angles, and be first to seven points in this fast same-device arcade match.</p>
+      <p class="lead">Defend your goal, strike clean angles, and be first to five points in this fast same-device arcade match.</p>
       <div class="stats" aria-label="Match score">
         <div class="stat"><span>Pink</span><strong id="p1Score">0</strong></div>
         <div class="stat"><span>Blue</span><strong id="p2Score">0</strong></div>
-        <div class="stat"><span>Target</span><strong>7</strong></div>
+        <div class="stat"><span>Target</span><strong>5</strong></div>
       </div>
       <div class="controls">
         <button id="startBtn" type="button">Start</button>
@@ -85,7 +86,7 @@
       <div id="overlay" class="overlay">
         <div>
           <h2 id="overlayTitle">Ready for the face-off?</h2>
-          <p id="overlayText">Use keyboard or touch controls. The first player to 7 points wins.</p>
+          <p id="overlayText">Use keyboard or touch controls. The first player to 5 points wins.</p>
           <div id="menuPanel" class="menu-panel" hidden>
             <button id="menuResumeBtn" type="button">Resume</button>
             <button id="menuRestartBtn" class="secondary" type="button">Restart</button>
@@ -93,7 +94,10 @@
             <button id="menuSoundBtn" class="secondary" type="button">Sound On</button>
             <button id="menuExitBtn" class="secondary" type="button">Exit Game</button>
           </div>
-          <button id="overlayBtn" type="button">Play Match</button>
+          <div class="overlay-actions">
+            <button id="overlayBtn" type="button">Play Match</button>
+            <button id="overlayBackBtn" class="secondary" type="button" hidden>Back to Games</button>
+          </div>
         </div>
       </div>
     </section>
@@ -111,15 +115,17 @@
     const restartBtn = document.querySelector("#restartBtn");
     const soundBtn = document.querySelector("#soundBtn");
     const overlayBtn = document.querySelector("#overlayBtn");
+    const overlayBackBtn = document.querySelector("#overlayBackBtn");
     const mobileMenuBtn = document.querySelector("#mobileMenuBtn");
     const menuPanel = document.querySelector("#menuPanel");
     const menuResumeBtn = document.querySelector("#menuResumeBtn");
     const menuRestartBtn = document.querySelector("#menuRestartBtn");
     const menuSoundBtn = document.querySelector("#menuSoundBtn");
     const menuExitBtn = document.querySelector("#menuExitBtn");
-    const W = canvas.width, H = canvas.height, GOAL = 150, TARGET = 7;
+    const W = canvas.width, H = canvas.height, GOAL = 150, TARGET = 5;
     const keys = new Set();
-    let audioCtx, soundOn = true, running = false, paused = false, last = 0, hitFlash = 0;
+    let audioCtx, soundOn = true, running = false, paused = false, matchOver = false, last = 0, hitFlash = 0, frameId = 0;
+    let scoringLocked = false, countdownUntil = 0, countdownDir = 1, scoreFlash = null;
     const puck = { x: W / 2, y: H / 2, vx: 0, vy: 3.8, r: 13, max: 10.5 };
     const p1 = { x: W / 2, y: 120, vx: 0, vy: 0, r: 27, score: 0, color: "#ff4fa3", touch: null };
     const p2 = { x: W / 2, y: 480, vx: 0, vy: 0, r: 27, score: 0, color: "#26d9ff", touch: null };
@@ -131,6 +137,7 @@
     canvas.addEventListener("pointercancel", releasePointer);
     startBtn.addEventListener("click", startGame);
     overlayBtn.addEventListener("click", () => paused ? togglePause() : startGame());
+    overlayBackBtn.addEventListener("click", exitGame);
     restartBtn.addEventListener("click", startGame);
     pauseBtn.addEventListener("click", togglePause);
     soundBtn.addEventListener("click", toggleSound);
@@ -139,25 +146,31 @@
     menuRestartBtn.addEventListener("click", startGame);
     menuSoundBtn.addEventListener("click", toggleSound);
     menuExitBtn.addEventListener("click", exitGame);
-    function startGame() { primeAudio(); Object.assign(p1, { x: W / 2, y: 120, score: 0 }); Object.assign(p2, { x: W / 2, y: 480, score: 0 }); resetPuck(Math.random() > .5 ? 1 : -1); running = true; paused = false; document.body.classList.add("is-playing"); closeMenuPanel(); last = performance.now(); overlay.classList.add("hidden"); updateScore(); requestAnimationFrame(loop); }
-    function togglePause() { if (!running) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; closeMenuPanel(); overlayBtn.hidden = false; overlayTitle.textContent = "Paused"; overlayText.textContent = "Take a breath, then resume the match."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); requestAnimationFrame(loop); } }
-    function openMobileMenu() { if (!running) return; paused = true; pauseBtn.textContent = "Resume"; overlayTitle.textContent = "Paused"; overlayText.textContent = ""; overlayBtn.hidden = true; menuPanel.hidden = false; overlay.classList.remove("hidden"); }
-    function resumeFromMenu() { if (!running) return; paused = false; pauseBtn.textContent = "Pause"; closeMenuPanel(); overlay.classList.add("hidden"); last = performance.now(); requestAnimationFrame(loop); }
+    function startGame() { primeAudio(); if (frameId) cancelAnimationFrame(frameId); Object.assign(p1, { x: W / 2, y: 120, score: 0, touch: null }); Object.assign(p2, { x: W / 2, y: 480, score: 0, touch: null }); running = true; paused = false; matchOver = false; scoringLocked = false; scoreFlash = null; resetPuck(Math.random() > .5 ? 1 : -1, true); document.body.classList.add("is-playing"); closeMenuPanel(); overlayBackBtn.hidden = true; pauseBtn.textContent = "Pause"; last = performance.now(); overlay.classList.add("hidden"); updateScore(); frameId = requestAnimationFrame(loop); }
+    function togglePause() { if (!running || matchOver) return; paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; closeMenuPanel(); overlayBackBtn.hidden = true; overlayBtn.hidden = false; overlayTitle.textContent = "Paused"; overlayText.textContent = "Take a breath, then resume the match."; overlayBtn.textContent = "Resume"; overlay.classList.toggle("hidden", !paused); if (!paused) { last = performance.now(); frameId = requestAnimationFrame(loop); } }
+    function openMobileMenu() { if (!running || matchOver) return; paused = true; pauseBtn.textContent = "Resume"; overlayBackBtn.hidden = true; overlayTitle.textContent = "Paused"; overlayText.textContent = ""; overlayBtn.hidden = true; menuPanel.hidden = false; overlay.classList.remove("hidden"); }
+    function resumeFromMenu() { if (!running || matchOver) return; paused = false; pauseBtn.textContent = "Pause"; closeMenuPanel(); overlay.classList.add("hidden"); last = performance.now(); frameId = requestAnimationFrame(loop); }
     function closeMenuPanel() { menuPanel.hidden = true; overlayBtn.hidden = false; }
     function exitGame() { window.location.href = "../index.html"; }
     function toggleSound() { soundOn = !soundOn; const text = soundOn ? "Sound On" : "Sound Off"; soundBtn.textContent = text; menuSoundBtn.textContent = text; soundBtn.setAttribute("aria-pressed", String(soundOn)); menuSoundBtn.setAttribute("aria-pressed", String(soundOn)); }
-    function loop(now) { if (!running || paused) return; const dt = Math.min(32, now - last) / 16.67; last = now; update(dt); draw(now); requestAnimationFrame(loop); }
-    function update(dt) { movePlayer(p1, dt, "w", "s", "a", "d", 0, H / 2); movePlayer(p2, dt, "arrowup", "arrowdown", "arrowleft", "arrowright", H / 2, H); puck.x += puck.vx * dt; puck.y += puck.vy * dt; puck.vx *= .996; puck.vy *= .996; wallBounce(); collide(p1); collide(p2); hitFlash = Math.max(0, hitFlash - dt * .08); }
+    function loop(now) { if (!running || paused) return; const dt = Math.min(32, now - last) / 16.67; last = now; update(dt, now); draw(now); if (running && !paused) frameId = requestAnimationFrame(loop); }
+    function update(dt, now) { if (matchOver) return; hitFlash = Math.max(0, hitFlash - dt * .08); if (scoreFlash && now - scoreFlash.started > 850) scoreFlash = null; if (countdownUntil) { if (now >= countdownUntil) { countdownUntil = 0; scoringLocked = false; launchPuck(countdownDir); } return; } movePlayer(p1, dt, "w", "s", "a", "d", 0, H / 2); movePlayer(p2, dt, "arrowup", "arrowdown", "arrowleft", "arrowright", H / 2, H); puck.x += puck.vx * dt; puck.y += puck.vy * dt; puck.vx *= .996; puck.vy *= .996; if (checkGoal()) return; wallBounce(); collide(p1); collide(p2); }
     function movePlayer(p, dt, up, down, left, right, minY, maxY) { const oldX = p.x, oldY = p.y, speed = 6.8 * dt; if (p.touch) { p.x += (p.touch.x - p.x) * .32; p.y += (p.touch.y - p.y) * .32; } else { if (keys.has(up)) p.y -= speed; if (keys.has(down)) p.y += speed; if (keys.has(left)) p.x -= speed; if (keys.has(right)) p.x += speed; } p.x = clamp(p.x, p.r, W - p.r); p.y = clamp(p.y, minY + p.r, maxY - p.r); p.vx = p.x - oldX; p.vy = p.y - oldY; }
-    function wallBounce() { if (puck.x < puck.r || puck.x > W - puck.r) { puck.x = clamp(puck.x, puck.r, W - puck.r); puck.vx *= -1; beep(220, .04); } const inGoal = puck.x > (W - GOAL) / 2 && puck.x < (W + GOAL) / 2; if (puck.y < -puck.r && inGoal) score(p2, 1); else if (puck.y > H + puck.r && inGoal) score(p1, -1); else { if (puck.y < puck.r) { puck.y = puck.r; puck.vy *= -1; } if (puck.y > H - puck.r) { puck.y = H - puck.r; puck.vy *= -1; } } }
+    function wallBounce() { if (puck.x < puck.r || puck.x > W - puck.r) { puck.x = clamp(puck.x, puck.r, W - puck.r); puck.vx *= -1; beep(220, .04); } const inGoal = isInsideGoalMouth(); if (!inGoal && puck.y < puck.r) { puck.y = puck.r; puck.vy *= -1; beep(220, .04); } if (!inGoal && puck.y > H - puck.r) { puck.y = H - puck.r; puck.vy *= -1; beep(220, .04); } }
+    function isInsideGoalMouth() { const left = (W - GOAL) / 2, right = (W + GOAL) / 2; return puck.x - puck.r >= left && puck.x + puck.r <= right; }
+    function checkGoal() { if (scoringLocked) return true; if (!isInsideGoalMouth()) return false; if (puck.y + puck.r < 0) { score(p2, 1); return true; } if (puck.y - puck.r > H) { score(p1, -1); return true; } return false; }
     function collide(p) { const dx = puck.x - p.x, dy = puck.y - p.y, dist = Math.hypot(dx, dy), min = puck.r + p.r; if (dist >= min) return; const a = Math.atan2(dy, dx), power = Math.min(puck.max, 5.2 + Math.hypot(p.vx, p.vy) * .55); puck.x = p.x + Math.cos(a) * min; puck.y = p.y + Math.sin(a) * min; puck.vx = Math.cos(a) * power + p.vx * .16; puck.vy = Math.sin(a) * power + p.vy * .16; hitFlash = 1; beep(420, .035); }
-    function score(player, dir) { player.score++; updateScore(); beep(120, .12); if (player.score >= TARGET) { running = false; document.body.classList.remove("is-playing"); closeMenuPanel(); overlayTitle.textContent = `${player === p1 ? "Pink" : "Blue"} wins!`; overlayText.textContent = "Great match. Restart for a fresh duel."; overlayBtn.textContent = "Play Again"; overlay.classList.remove("hidden"); return; } resetPuck(dir); }
-    function resetPuck(dir) { puck.x = W / 2; puck.y = H / 2; puck.vx = (Math.random() - .5) * 2; puck.vy = 3.9 * dir; }
-    function draw(now) { ctx.fillStyle = "#07111f"; ctx.fillRect(0,0,W,H); drawField(now); drawScoreGhost(); drawDisc(p1); drawDisc(p2); drawPuck(); }
+    function score(player, dir) { if (scoringLocked || matchOver) return; scoringLocked = true; player.score++; updateScore(); playGoalSound(); scoreFlash = { player, started: performance.now() }; if (player.score >= TARGET) { endMatch(player); return; } resetPuck(dir); }
+    function resetPuck(dir, skipCountdown = false) { countdownDir = dir; puck.x = W / 2; puck.y = H / 2; puck.vx = 0; puck.vy = 0; p1.touch = null; p2.touch = null; if (skipCountdown) { launchPuck(dir); return; } countdownUntil = performance.now() + 3200; }
+    function launchPuck(dir) { puck.x = W / 2; puck.y = H / 2; puck.vx = (Math.random() - .5) * 2; puck.vy = 3.9 * dir; }
+    function endMatch(winner) { matchOver = true; running = false; paused = false; countdownUntil = 0; if (frameId) cancelAnimationFrame(frameId); document.body.classList.remove("is-playing"); closeMenuPanel(); overlayTitle.textContent = `${winner === p1 ? "Pink" : "Blue"} Victory`; overlayText.textContent = `Final score: Pink ${p1.score} - Blue ${p2.score}.`; overlayBtn.textContent = "Play Again"; overlayBtn.hidden = false; overlayBackBtn.hidden = false; pauseBtn.textContent = "Pause"; overlay.classList.remove("hidden"); }
+    function draw(now) { ctx.fillStyle = "#07111f"; ctx.fillRect(0,0,W,H); drawField(now); drawScoreGhost(); drawDisc(p1); drawDisc(p2); drawPuck(); drawScoreFlash(now); drawCountdown(now); }
     function drawField(now) { ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke(); ctx.beginPath(); ctx.arc(W/2,H/2,62,0,Math.PI*2); ctx.stroke(); ctx.fillStyle = p1.color; ctx.fillRect((W-GOAL)/2,0,GOAL,7); ctx.fillStyle = p2.color; ctx.fillRect((W-GOAL)/2,H-7,GOAL,7); for (let y = 34; y < H; y += 46) { ctx.fillStyle = `rgba(255,255,255,${.025 + Math.sin(now * .002 + y) * .015})`; ctx.fillRect(24,y,W-48,1); } }
     function drawScoreGhost() { ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "900 72px Segoe UI, sans-serif"; ctx.fillStyle = "rgba(255,79,163,.11)"; ctx.fillText(p1.score, W/2, H*.25); ctx.fillStyle = "rgba(38,217,255,.11)"; ctx.fillText(p2.score, W/2, H*.75); }
     function drawDisc(p) { const g = ctx.createRadialGradient(p.x-8,p.y-8,4,p.x,p.y,p.r); g.addColorStop(0,"#fff"); g.addColorStop(.22,p.color); g.addColorStop(1,"#121729"); ctx.shadowBlur = 18; ctx.shadowColor = p.color; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
     function drawPuck() { ctx.shadowBlur = 18 + hitFlash * 12; ctx.shadowColor = "#fff"; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(puck.x,puck.y,puck.r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
+    function drawScoreFlash(now) { if (!scoreFlash) return; const t = (now - scoreFlash.started) / 850, alpha = Math.max(0, 1 - t), y = scoreFlash.player === p1 ? H * .28 : H * .72; ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "900 48px Segoe UI, sans-serif"; ctx.fillStyle = `${scoreFlash.player.color}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`; ctx.shadowBlur = 24; ctx.shadowColor = scoreFlash.player.color; ctx.fillText("+1", W / 2, y - t * 34); ctx.restore(); }
+    function drawCountdown(now) { if (!countdownUntil) return; const elapsed = now - (countdownUntil - 3200), label = elapsed < 800 ? "3" : elapsed < 1600 ? "2" : elapsed < 2400 ? "1" : "Go"; ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "900 64px Segoe UI, sans-serif"; ctx.fillStyle = "#f7fbff"; ctx.shadowBlur = 24; ctx.shadowColor = "#ffd166"; ctx.fillText(label, W / 2, H / 2); ctx.restore(); }
     function handlePointer(e) { e.preventDefault(); const pos = pointerPos(e); const p = pos.y < H / 2 ? p1 : p2; p.touch = pos; }
     function releasePointer(e) { const pos = pointerPos(e); (pos.y < H / 2 ? p1 : p2).touch = null; }
     function pointerPos(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
@@ -165,6 +178,7 @@
     function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
     function primeAudio() { if (!audioCtx) audioCtx = new (AudioContext || webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); }
     function beep(freq, time) { if (!soundOn || !audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "triangle"; o.frequency.value = freq; g.gain.value = .035; g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + time); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + time); }
+    function playGoalSound() { beep(220, .08); setTimeout(() => beep(440, .08), 80); setTimeout(() => beep(660, .12), 160); }
     draw(performance.now());
   </script>
 </body>
